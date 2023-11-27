@@ -158,10 +158,11 @@ class IdpyOidcUtils(Persistence):
         _ec = self.app.server.context
 
         if client_id:
-            client_info = self.get_client_by_id(client_id)
+            client_info = self.restore_client_info(client_id)
         elif "Basic " in getattr(context, "request_authorization", ""):
             # here even for introspection endpoint
-            client_info = self.get_client_by_basic_auth(context.request_authorization) or {}
+            client_info = self.restore_client_info_by_basic_auth(
+                context.request_authorization) or {}
             client_id = client_info.get("client_id")
         elif context.request and context.request.get(
                 "client_assertion"
@@ -179,10 +180,11 @@ class IdpyOidcUtils(Persistence):
                 verify=False,  # otherwise keyjar MUST contain the issuer key
             )
             client_id = token.get("iss")
-            client_info = self.get_client_by_id(client_id)
+            client_info = self.restore_client_info(client_id)
 
         elif "Bearer " in getattr(context, "request_authorization", ""):
-            client_info = self.get_client_by_bearer_token(context.request_authorization) or {}
+            client_info = self.restore_client_info_by_bearer_token(
+                context.request_authorization) or {}
             client_id = client_info.get("client_id")
 
         else:  # pragma: no cover
@@ -192,7 +194,6 @@ class IdpyOidcUtils(Persistence):
             raise InvalidClient(_msg)
 
         if client_info:
-            _ec.cdb = {client_id: client_info}
             logger.debug(
                 f"Loaded oidcop client from {self.app.storage.__class__.__name__}: {client_info}")
         else:  # pragma: no cover

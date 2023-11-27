@@ -4,6 +4,7 @@ import shutil
 from typing import Optional
 
 import pytest
+from cryptojwt.key_jar import init_key_jar
 from idpyoidc.client.defaults import DEFAULT_KEY_DEFS
 from idpyoidc.message.oidc import AuthorizationRequest
 from idpyoidc.server import Server
@@ -113,7 +114,7 @@ CLIENT_INFO_1 = {
     "jwks_uri": "https://client.example.org/my_public_keys.jwks",
     "contacts": ["ve7jtb@example.org", "mary@example.org"],
 }
-
+KEYJAR_1 = init_key_jar(key_defs=DEFAULT_KEY_DEFS)
 AUTH_REQ = AuthorizationRequest(
     client_id="client_1",
     redirect_uri="https://example.com/cb",
@@ -187,8 +188,20 @@ class TestPersistence(object):
 
         return _token
 
+    def _client_registration(self,
+                             client_info: dict,
+                             jwks: Optional[dict] = None,
+                             jwks_uri: Optional[str] = ""):
+        _context = self.app.server.context
+        _context.cdb[client_info["client_id"]] = client_info
+        if jwks:
+            _context.keyjar.import_jwks(jwks, client_info["client_id"])
+        if jwks_uri:
+            pass
+
     def test_load_cdb(self):
-        self.utils.store_client_info(CLIENT_INFO_1)
+        self._client_registration(CLIENT_INFO_1, jwks=KEYJAR_1.export_jwks())
+        self.utils.store_client_info(CLIENT_INFO_1["client_id"])
 
         context = ExtendedContext()
 

@@ -155,12 +155,13 @@ class Persistence(object):
         self.app.storage.store(information_type="jwks", key=client_id,
                                value=_context.keyjar.export_jwks(issuer=client_id))
 
-    def restore_client_info(self, client_id: str):
+    def restore_client_info(self, client_id: str) -> dict:
         _context = self.app.server.context
         client_info = self.app.storage.fetch(information_type="client_info", key=client_id)
         _context.cdb[client_id] = client_info
         jwks = self.app.storage.fetch(information_type="jwks", key=client_id)
         _context.keyjar.import_jwks(jwks, client_id)
+        return client_info
 
     def restore_client_info_by_bearer_token(self, request_authorization: str):
         access_token = request_authorization.replace("Bearer ", "")
