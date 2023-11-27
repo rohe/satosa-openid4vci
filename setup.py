@@ -19,6 +19,7 @@ with open(f'src/{_pkg_name}/__init__.py', 'r') as fd:
 
 setup(
     name=_pkg_name,
+    version=version,
     description="SATOSA Frontend based on openid4vci",
     long_description=readme(),
     long_description_content_type="text/markdown",

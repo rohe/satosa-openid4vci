@@ -251,7 +251,7 @@ class IdpyOidcFrontend(FrontendModule, IdpyOidcEndpoints):
             logger.debug(f"Redirect to: {redirect_url}")
             resp = SeeOther(redirect_url)
         else:  # pragma: no cover
-            self._flush_endpoint_context_memory()
+            self._flush_session_manager()
             raise NotImplementedError()
 
         # I don't flush in-mem db because it will be flushed by handle_authn_response

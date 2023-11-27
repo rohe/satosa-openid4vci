@@ -293,6 +293,6 @@ class IdpyOidcEndpoints(IdpyOidcUtils):
         # better return jwt or jwe here!
         response = JsonResponse(proc_req["response_args"].to_dict())
 
-        self._flush_endpoint_context_memory()
+        self._flush_session_manager()
         return self.send_response(response)
 

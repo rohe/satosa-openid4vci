@@ -3,14 +3,14 @@ import os
 import shutil
 from typing import Optional
 
+import pytest
+from cryptojwt.key_jar import init_key_jar
 from idpyoidc.client.defaults import DEFAULT_KEY_DEFS
 from idpyoidc.message.oidc import AccessTokenRequest
 from idpyoidc.message.oidc import AuthorizationRequest
 from idpyoidc.server import Server
 from idpyoidc.server.authn_event import create_authn_event
 from idpyoidc.server.util import execute
-import pytest
-
 from satosa_openid4vci.core.persistence import Persistence
 
 BASEDIR = os.path.abspath(os.path.dirname(__file__))
@@ -21,6 +21,7 @@ def full_path(local_file):
 
 
 class App(object):
+
     def __init__(self, storage, server=None):
         self.storage = storage
         self.server = server
@@ -137,6 +138,8 @@ CLIENT_INFO_1 = {
     "jwks_uri": "https://client.example.org/my_public_keys.jwks",
     "contacts": ["ve7jtb@example.org", "mary@example.org"],
 }
+KEYJAR_1 = init_key_jar(key_defs=DEFAULT_KEY_DEFS)
+
 CLIENT_INFO_2 = {
     "client_id": "client_2",
     "client_secret": "ssseeeccrettt",
@@ -147,9 +150,11 @@ CLIENT_INFO_2 = {
     "token_endpoint_auth_method": "client_secret_basic",
     "jwks_uri": "https://client2.example.org/jwks.json"
 }
+KEYJAR_2 = init_key_jar(key_defs=DEFAULT_KEY_DEFS)
 
 
 class TestPersistence(object):
+
     @pytest.fixture(autouse=True)
     def create_persistence_layer(self):
         # clena up after last time
@@ -212,6 +217,17 @@ class TestPersistence(object):
 
         return _token
 
+    def _client_registration(self,
+                             client_info: dict,
+                             jwks: Optional[dict] = None,
+                             jwks_uri: Optional[str] = ""):
+        _context = self.app.server.context
+        _context.cdb[client_info["client_id"]] = client_info
+        if jwks:
+            _context.keyjar.import_jwks(jwks, client_info["client_id"])
+        if jwks_uri:
+            pass
+
     def test_claims(self):
         claims = {
             "name": "Diana Krall",
@@ -230,40 +246,33 @@ class TestPersistence(object):
         assert _claims2 == claims
 
     def test_client(self):
-        client_info = {
-            "client_id": "client_1",
-            "application_type": "web",
-            "redirect_uris": [
-                "https://client.example.org/callback",
-                "https://client.example.org/callback2",
-            ],
-            "token_endpoint_auth_method": "client_secret_basic",
-            "jwks_uri": "https://client.example.org/my_public_keys.jwks",
-            "contacts": ["ve7jtb@example.org", "mary@example.org"],
-        }
+        self._client_registration(CLIENT_INFO_1, jwks=KEYJAR_1.export_jwks())
+        self.persistence.store_client_info(CLIENT_INFO_1["client_id"])
 
-        self.persistence.store_client_info(client_info)
+        _context = self.app.server.context
+        self.persistence.restore_client_info(CLIENT_INFO_1["client_id"])
+        assert _context.cdb[CLIENT_INFO_1["client_id"]] == CLIENT_INFO_1
 
-        _cio = self.persistence.get_client_by_id(client_info["client_id"])
-        assert _cio == client_info
-
-        credentials = f"{client_info['client_id']}:client_secret"
+        _context.cdb = {}
+        credentials = f"{CLIENT_INFO_1['client_id']}:{CLIENT_INFO_1['client_secret']}"
         token = base64.b64encode(credentials.encode("utf-8")).decode("utf-8")
         authz = f"Basic {token}"
-        _cio2 = self.persistence.get_client_by_basic_auth(authz)
-        assert _cio2 == client_info
+        self.persistence.restore_client_info_by_basic_auth(authz)
+        assert _context.cdb[CLIENT_INFO_1["client_id"]] == CLIENT_INFO_1
 
+        _context.cdb = {}
         session_id = self._create_session(AUTH_REQ)
         grant = self.app.server.context.authz(session_id, AUTH_REQ)
         code = self._mint_code(grant, session_id)
         access_token = self._mint_access_token(grant, session_id, code)
-        _cio3 = self.persistence.get_client_by_bearer_token(f"Bearer {access_token.value}")
-        assert _cio3 == client_info
+        self.persistence.restore_client_info_by_bearer_token(f"Bearer {access_token.value}")
+        assert _context.cdb[CLIENT_INFO_1["client_id"]] == CLIENT_INFO_1
 
     def test_get_registered_client_ids(self):
-
-        self.persistence.store_client_info(CLIENT_INFO_1)
-        self.persistence.store_client_info(CLIENT_INFO_2)
+        self._client_registration(CLIENT_INFO_1, jwks=KEYJAR_1.export_jwks())
+        self.persistence.store_client_info(CLIENT_INFO_1["client_id"])
+        self._client_registration(CLIENT_INFO_2, jwks=KEYJAR_2.export_jwks())
+        self.persistence.store_client_info(CLIENT_INFO_2["client_id"])
 
         clients = self.persistence.get_registered_client_ids()
         assert set(clients) == {"client_1", "client_2"}
@@ -271,26 +280,32 @@ class TestPersistence(object):
     def test_state(self):
         # Same user from different clients
         # First state change
-        self.app.server.context.cdb["client_1"] = CLIENT_INFO_1
+        self._client_registration(CLIENT_INFO_1, jwks=KEYJAR_1.export_jwks())
+
         session_id = self._create_session(AUTH_REQ)
         grant = self.app.server.context.authz(session_id, AUTH_REQ)
         code_1 = self._mint_code(grant, session_id)
         self.persistence.store_state('client_1')
 
+        self.persistence.flush_session_manager()
+
         # Second state change
-        self.app.server.context.cdb["client_2"] = CLIENT_INFO_2
+        self._client_registration(CLIENT_INFO_2, jwks=KEYJAR_2.export_jwks())
         session_id = self._create_session(AUTH_REQ_2)
         grant = self.app.server.context.authz(session_id, AUTH_REQ_2)
-        code = self._mint_code(grant, session_id)
-        self.persistence.store_state('client_1')
+        code_2 = self._mint_code(grant, session_id)
+        self.persistence.store_state('client_2')
+
+        self.persistence.reset_state()
 
         _request = TOKEN_REQ.copy()
-        _request["code"] = code_1
+        _request["code"] = code_1.value
         credentials = f"{CLIENT_INFO_1['client_id']}:CLIENT_INFO_1['client_secret']"
         token = base64.b64encode(credentials.encode("utf-8")).decode("utf-8")
         http_info = {"headers": {"authorization": f"Basic {token}"}}
-        self.persistence.update_state(request=_request, http_info=http_info)
+        self.persistence.restore_state(request=_request, http_info=http_info)
 
-    def test_update_state(self):
-        pass
-
+        assert set(self.app.server.context.cdb.keys()) == {"client_1"}
+        assert len(self.app.server.context.session_manager.db.db.keys()) == 3
+        assert 'diana' in self.app.server.context.session_manager.db.db
+        assert 'diana;;client_1' in self.app.server.context.session_manager.db.db
