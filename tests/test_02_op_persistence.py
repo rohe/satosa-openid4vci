@@ -11,20 +11,13 @@ from idpyoidc.message.oidc import AuthorizationRequest
 from idpyoidc.server import Server
 from idpyoidc.server.authn_event import create_authn_event
 from idpyoidc.server.util import execute
-from satosa_openid4vci.core.persistence import Persistence
+from satosa_openid4vci.persistence.openid_provider import OPPersistence
 
 BASEDIR = os.path.abspath(os.path.dirname(__file__))
 
 
 def full_path(local_file):
     return os.path.join(BASEDIR, local_file)
-
-
-class App(object):
-
-    def __init__(self, storage, server=None):
-        self.storage = storage
-        self.server = server
 
 
 CRYPT_CONFIG = {
@@ -153,7 +146,7 @@ CLIENT_INFO_2 = {
 KEYJAR_2 = init_key_jar(key_defs=DEFAULT_KEY_DEFS)
 
 
-class TestPersistence(object):
+class TestOPPersistence(object):
 
     @pytest.fixture(autouse=True)
     def create_persistence_layer(self):
@@ -163,12 +156,12 @@ class TestPersistence(object):
         except FileNotFoundError:
             pass
 
-        storage = execute(STORE_CONF)
-        self.app = App(storage=storage)
-        self.persistence = Persistence(self.app)
 
-        self.app.server = Server(SERVER_CONF)
-        self.session_manager = self.app.server.context.session_manager
+        self.server = Server(SERVER_CONF)
+        storage = execute(STORE_CONF)
+        self.server.persistence = OPPersistence(storage, upstream_get=self.server.unit_get)
+
+        #self.session_manager = self.server.context.session_manager
         self.user_id = "diana"
 
     def _create_session(self, auth_req, sub_type="public", sector_identifier="",
@@ -181,12 +174,12 @@ class TestPersistence(object):
 
         client_id = authz_req["client_id"]
         ae = create_authn_event(user_id)
-        return self.app.server.context.session_manager.create_session(
+        return self.server.context.session_manager.create_session(
             ae, authz_req, user_id, client_id=client_id, sub_type=sub_type
         )
 
     def _mint_code(self, grant, session_id):
-        _server = self.app.server
+        _server = self.server
         _sman = _server.context.session_manager
         # Constructing an authorization code is now done
         _code = grant.mint_token(
@@ -201,7 +194,7 @@ class TestPersistence(object):
         return _code
 
     def _mint_access_token(self, grant, session_id, token_ref=None):
-        _server = self.app.server
+        _server = self.server
         _sman = _server.context.session_manager
         _session_info = _sman.get_session_info(session_id, client_session_info=True)
 
@@ -221,7 +214,7 @@ class TestPersistence(object):
                              client_info: dict,
                              jwks: Optional[dict] = None,
                              jwks_uri: Optional[str] = ""):
-        _context = self.app.server.context
+        _context = self.server.context
         _context.cdb[client_info["client_id"]] = client_info
         if jwks:
             _context.keyjar.import_jwks(jwks, client_info["client_id"])
@@ -235,46 +228,46 @@ class TestPersistence(object):
             "family_name": "Krall",
             "nickname": "Dina",
         }
-        self.persistence.store_claims(claims, 'diana')
+        self.server.persistence.store_claims(claims, 'diana')
 
-        _claims = self.persistence.load_claims('diana')
+        _claims = self.server.persistence.load_claims('diana')
         assert claims == _claims
 
         sid = self._create_session(auth_req=AUTH_REQ)
-        _claims2 = self.persistence.get_claims_from_sid(sid)
+        _claims2 = self.server.persistence.get_claims_from_sid(sid)
         assert _claims2 == _claims
         assert _claims2 == claims
 
     def test_client(self):
         self._client_registration(CLIENT_INFO_1, jwks=KEYJAR_1.export_jwks())
-        self.persistence.store_client_info(CLIENT_INFO_1["client_id"])
+        self.server.persistence.store_client_info(CLIENT_INFO_1["client_id"])
 
-        _context = self.app.server.context
-        self.persistence.restore_client_info(CLIENT_INFO_1["client_id"])
+        _context = self.server.context
+        self.server.persistence.restore_client_info(CLIENT_INFO_1["client_id"])
         assert _context.cdb[CLIENT_INFO_1["client_id"]] == CLIENT_INFO_1
 
         _context.cdb = {}
         credentials = f"{CLIENT_INFO_1['client_id']}:{CLIENT_INFO_1['client_secret']}"
         token = base64.b64encode(credentials.encode("utf-8")).decode("utf-8")
         authz = f"Basic {token}"
-        self.persistence.restore_client_info_by_basic_auth(authz)
+        self.server.persistence.restore_client_info_by_basic_auth(authz)
         assert _context.cdb[CLIENT_INFO_1["client_id"]] == CLIENT_INFO_1
 
         _context.cdb = {}
         session_id = self._create_session(AUTH_REQ)
-        grant = self.app.server.context.authz(session_id, AUTH_REQ)
+        grant = self.server.context.authz(session_id, AUTH_REQ)
         code = self._mint_code(grant, session_id)
         access_token = self._mint_access_token(grant, session_id, code)
-        self.persistence.restore_client_info_by_bearer_token(f"Bearer {access_token.value}")
+        self.server.persistence.restore_client_info_by_bearer_token(f"Bearer {access_token.value}")
         assert _context.cdb[CLIENT_INFO_1["client_id"]] == CLIENT_INFO_1
 
     def test_get_registered_client_ids(self):
         self._client_registration(CLIENT_INFO_1, jwks=KEYJAR_1.export_jwks())
-        self.persistence.store_client_info(CLIENT_INFO_1["client_id"])
+        self.server.persistence.store_client_info(CLIENT_INFO_1["client_id"])
         self._client_registration(CLIENT_INFO_2, jwks=KEYJAR_2.export_jwks())
-        self.persistence.store_client_info(CLIENT_INFO_2["client_id"])
+        self.server.persistence.store_client_info(CLIENT_INFO_2["client_id"])
 
-        clients = self.persistence.get_registered_client_ids()
+        clients = self.server.persistence.get_registered_client_ids()
         assert set(clients) == {"client_1", "client_2"}
 
     def test_state(self):
@@ -283,29 +276,29 @@ class TestPersistence(object):
         self._client_registration(CLIENT_INFO_1, jwks=KEYJAR_1.export_jwks())
 
         session_id = self._create_session(AUTH_REQ)
-        grant = self.app.server.context.authz(session_id, AUTH_REQ)
+        grant = self.server.context.authz(session_id, AUTH_REQ)
         code_1 = self._mint_code(grant, session_id)
-        self.persistence.store_state('client_1')
+        self.server.persistence.store_state('client_1')
 
-        self.persistence.flush_session_manager()
+        self.server.persistence.flush_session_manager()
 
         # Second state change
         self._client_registration(CLIENT_INFO_2, jwks=KEYJAR_2.export_jwks())
         session_id = self._create_session(AUTH_REQ_2)
-        grant = self.app.server.context.authz(session_id, AUTH_REQ_2)
+        grant = self.server.context.authz(session_id, AUTH_REQ_2)
         code_2 = self._mint_code(grant, session_id)
-        self.persistence.store_state('client_2')
+        self.server.persistence.store_state('client_2')
 
-        self.persistence.reset_state()
+        self.server.persistence.reset_state()
 
         _request = TOKEN_REQ.copy()
         _request["code"] = code_1.value
         credentials = f"{CLIENT_INFO_1['client_id']}:CLIENT_INFO_1['client_secret']"
         token = base64.b64encode(credentials.encode("utf-8")).decode("utf-8")
         http_info = {"headers": {"authorization": f"Basic {token}"}}
-        self.persistence.restore_state(request=_request, http_info=http_info)
+        self.server.persistence.restore_state(request=_request, http_info=http_info)
 
-        assert set(self.app.server.context.cdb.keys()) == {"client_1"}
-        assert len(self.app.server.context.session_manager.db.db.keys()) == 3
-        assert 'diana' in self.app.server.context.session_manager.db.db
-        assert 'diana;;client_1' in self.app.server.context.session_manager.db.db
+        assert set(self.server.context.cdb.keys()) == {"client_1"}
+        assert len(self.server.context.session_manager.db.db.keys()) == 3
+        assert 'diana' in self.server.context.session_manager.db.db
+        assert 'diana;;client_1' in self.server.context.session_manager.db.db
