@@ -6,14 +6,15 @@ from typing import Optional
 
 from cryptojwt import KeyJar
 from idpyoidc.message.oidc import AuthnToken
+from idpyoidc.server import Endpoint
 from idpyoidc.server.exception import ClientAuthenticationError
 from idpyoidc.server.exception import InvalidClient
 from idpyoidc.server.exception import UnAuthorizedClient
 from idpyoidc.server.exception import UnknownClient
+from satosa.attribute_mapping import AttributeMapper
 from satosa.context import Context
 
 from .core import ExtendedContext
-from .core.persistence import Persistence
 
 try:
     from satosa.context import add_prompt_to_context
@@ -30,14 +31,13 @@ logger = logging.getLogger(__name__)
 IGNORED_HEADERS = ["cookie", "user-agent"]
 
 
-class IdpyOidcUtils(Persistence):
+class IdpyOidcUtils(object):
     """
     Utilities used by all endpoints
     """
 
     def __init__(self, app=None):  # pragma: no cover
-        Persistence.__init__(self, app=app)
-        self.jwks_public = {}
+        self.app = app
 
     def get_http_info(self, context: ExtendedContext):
         """
@@ -65,9 +65,10 @@ class IdpyOidcUtils(Persistence):
 
         return http_info
 
-    def parse_request(
-            self, endpoint, context: ExtendedContext, http_info: dict = None
-    ):
+    def parse_request(self,
+                      endpoint: Endpoint,
+                      context: ExtendedContext,
+                      http_info: dict = None):
         """
         Returns a parsed OAuth2/OIDC request, used by endpoints views
         """
@@ -143,7 +144,7 @@ class IdpyOidcUtils(Persistence):
         return self.send_response(response)
 
     def send_response(self, response):
-        self.flush_session_manager()
+        self.app.server["openid_provider"].persistence.flush_session_manager()
         return response
 
     def load_cdb(self, context: ExtendedContext, client_id: Optional[str] = None) -> dict:
@@ -155,13 +156,15 @@ class IdpyOidcUtils(Persistence):
         elif context.request and isinstance(context.request, dict):
             client_id = context.request.get("client_id")
 
-        _ec = self.app.server.context
+        _entity_type = self.app.server["openid_provider"]
+        _ec = _entity_type.context
+        _persistence = _entity_type.persistence
 
         if client_id:
-            client_info = self.restore_client_info(client_id)
+            client_info = _persistence.restore_client_info(client_id)
         elif "Basic " in getattr(context, "request_authorization", ""):
             # here even for introspection endpoint
-            client_info = self.restore_client_info_by_basic_auth(
+            client_info = _persistence.restore_client_info_by_basic_auth(
                 context.request_authorization) or {}
             client_id = client_info.get("client_id")
         elif context.request and context.request.get(
@@ -180,10 +183,10 @@ class IdpyOidcUtils(Persistence):
                 verify=False,  # otherwise keyjar MUST contain the issuer key
             )
             client_id = token.get("iss")
-            client_info = self.restore_client_info(client_id)
+            client_info = _persistence.restore_client_info(client_id)
 
         elif "Bearer " in getattr(context, "request_authorization", ""):
-            client_info = self.restore_client_info_by_bearer_token(
+            client_info = _persistence.restore_client_info_by_bearer_token(
                 context.request_authorization) or {}
             client_id = client_info.get("client_id")
 

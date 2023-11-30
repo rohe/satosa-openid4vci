@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 def oidc_provider_init_app(config, domain, name="idpy_oidc", **kwargs):
     name = name or __name__
-    app = type("IdpyOidcApp", (object,), {"srv_config": config})
+    app = type("IdpyOidcApp", (object,), {"entity_config": config})
     app.server = make_federation_combo(**config)
     for entity_type in app.server.keys():
         setattr(app, entity_type, app.server[entity_type])
@@ -31,5 +31,4 @@ def idpy_oidc_application(conf: dict):
     app.default_target_backend = conf.get("default_target_backend")
     app.salt_size = conf.get("salt_size", 8)
 
-    app.storage = execute(conf["storage"])
     return app

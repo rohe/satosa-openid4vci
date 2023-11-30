@@ -150,7 +150,7 @@ class TestOPPersistence(object):
 
     @pytest.fixture(autouse=True)
     def create_persistence_layer(self):
-        # clena up after last time
+        # clean up after last time
         try:
             shutil.rmtree("storage")
         except FileNotFoundError:

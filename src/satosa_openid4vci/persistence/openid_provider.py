@@ -191,3 +191,35 @@ class OPPersistence(object):
 
     def get_registered_client_ids(self):
         return self.storage.keys_by_information_type("client_info")
+
+    def load_all_claims(self, context=None):
+        claims = {}
+        _context = context or self.upstream_get("context")
+        sman = _context.session_manager
+
+        for k, v in sman.dump()["db"].items():
+            if v[0] == "idpyoidc.server.session.grant.Grant":
+                sid = k
+                claims = self.storage.get_claims_from_sid(sid)
+                break
+            else:  # pragma: no cover
+                continue
+
+        if not claims:
+            logger.warning(
+                "Can't find any suitable sid/claims from stored session"
+            )
+
+        # That's a patchy runtime definition of userinfo db configuration
+        _context.userinfo.load(claims)
+
+    def store_pushed_authorization(self):
+        _context = self.upstream_get("context")
+        par_db = getattr(_context, "par_db", None)
+        if par_db:
+            self.storage.store(information_type="par", value=par_db)
+
+    def restore_pushed_authorization(self):
+        _context = self.upstream_get("context")
+        _par = self.storage.fetch(information_type="par")
+        _context.par_db = _par
