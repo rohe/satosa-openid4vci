@@ -11,7 +11,7 @@ from idpyoidc.message.oidc import AuthorizationErrorResponse
 from idpyoidc.message.oidc import AuthorizationRequest
 from idpyoidc.server import Endpoint
 from idpyoidc.server.authn_event import create_authn_event
-from satosa_openid4vci.utils import IdpyOidcUtils
+from satosa_openid4vci.utils import Openid4VCIUtils
 
 from ..core import ExtendedContext
 from ..core.claims import combine_claim_values
@@ -30,11 +30,11 @@ from satosa.response import SeeOther
 logger = logging.getLogger(__name__)
 
 
-class VCIAuthorization(IdpyOidcUtils):
+class VCIAuthorization(Openid4VCIUtils):
     name = "authorization"
 
     def __init__(self, app, auth_req_callback_func, converter):  # pragma: no cover
-        IdpyOidcUtils.__init__(self, app)
+        Openid4VCIUtils.__init__(self, app)
         self.auth_req_callback_func = auth_req_callback_func
         self.converter = converter
         self.entity_type = app.server["openid_provider"]

@@ -6,6 +6,7 @@ import logging
 import satosa
 
 from .endpoint_wrapper.authorization import VCIAuthorization
+from .endpoints import Openid4VCIEndpoints
 
 try:
     from satosa.context import add_prompt_to_context
@@ -22,7 +23,7 @@ logger = logging.getLogger(__name__)
 IGNORED_HEADERS = ["cookie", "user-agent"]
 
 
-class OpenID4VCIFrontend(FrontendModule):
+class OpenID4VCIFrontend(FrontendModule, Openid4VCIEndpoints):
     """
     OpenID Connect frontend module based on idpy oidcop
     """
@@ -48,13 +49,17 @@ class OpenID4VCIFrontend(FrontendModule):
         :rtype: list[(str, ((satosa.context.Context, Any) -> satosa.response.Response, Any))]
         :raise ValueError: if more than one backend is configured
         """
-        url_map = [
-            (v["path"], getattr(self, f"{k}_endpoint"))
-            for k, v in self.config.endpoint.items()
-        ]
+        url_map = []
+        for entity_type, item in self.app.server.items():
+            if entity_type == "federation_entity":
+                for k,v in item.server.endpoint.items():
+                    url_map.append((v.endpoint_path, getattr(self, f"{k}_endpoint")))
+            else:
+                for k,v in item.endpoint.items():
+                    url_map.append((v.endpoint_path, getattr(self, f"{k}_endpoint")))
 
         # add jwks.json webpath
-        uri_path = self.config["key_conf"]["uri_path"]
+        uri_path = self.app.server["openid_provider"].config["key_conf"]["uri_path"]
         url_map.append((uri_path, self.jwks_endpoint))
 
         logger.debug(f"Loaded OIDC Provider endpoints: {url_map}")

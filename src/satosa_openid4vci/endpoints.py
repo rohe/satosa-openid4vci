@@ -8,18 +8,19 @@ from idpyoidc.server.exception import UnknownClient
 from satosa.context import Context
 from satosa_openid4vci.core import ExtendedContext
 from satosa_openid4vci.core.response import JsonResponse
-from satosa_openid4vci.utils import IdpyOidcUtils
+from satosa_openid4vci.utils import Openid4VCIUtils
 
-from src.satosa_openid4vci.endpoint_wrapper.authorization import VCIAuthorization
+from satosa_openid4vci.core.response import JWSResponse
+from satosa_openid4vci.endpoint_wrapper.authorization import VCIAuthorization
 
 logger = logging.getLogger(__name__)
 
 
-class IdpyOidcEndpoints(IdpyOidcUtils):
+class Openid4VCIEndpoints(Openid4VCIUtils):
     """Handles all the Entity endpoints"""
 
     def __init__(self, app, auth_req_callback_func, converter):  # pragma: no cover
-        IdpyOidcUtils.__init__(app)
+        Openid4VCIUtils.__init__(app)
         self.endpoint_wrapper = {
             "authorization": VCIAuthorization(self.app, auth_req_callback_func, converter)
         }
@@ -61,12 +62,11 @@ class IdpyOidcEndpoints(IdpyOidcUtils):
         _env = self._request_setup(context, entity_type="federation_entity",
                                    endpoint="entity_configuration")
 
-        parsed_req = self.parse_request(_env["endpoint"], context.request,
-                                        http_info=_env["http_info"])
+        parsed_req = self.parse_request(_env["endpoint"], context.request, http_info=_env["http_info"])
         proc_req = _env["endpoint"].process_request(parsed_req, http_info=_env["http_info"])
 
         info = _env["endpoint"].do_response(request=parsed_req, **proc_req)
-        return JsonResponse(info["response"])
+        return JWSResponse(info["response"], content="application/entity-statement+jwt")
 
     def authorization_endpoint(self, context: ExtendedContext):
         """

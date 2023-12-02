@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 IGNORED_HEADERS = ["cookie", "user-agent"]
 
 
-class IdpyOidcUtils(object):
+class Openid4VCIUtils(object):
     """
     Utilities used by all endpoints
     """
@@ -67,16 +67,13 @@ class IdpyOidcUtils(object):
 
     def parse_request(self,
                       endpoint: Endpoint,
-                      context: ExtendedContext,
-                      http_info: dict = None):
+                      request: dict,
+                      http_info: dict):
         """
         Returns a parsed OAuth2/OIDC request, used by endpoints views
         """
-        http_info = http_info or self.get_http_info(context)
         try:
-            parse_req = endpoint.parse_request(
-                context.request, http_info=http_info,
-            )
+            parse_req = endpoint.parse_request(request, http_info=http_info)
         except (
                 InvalidClient,
                 UnknownClient,

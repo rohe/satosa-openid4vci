@@ -1,6 +1,15 @@
 op:
   server_info:
     entity_id: 'https://ci.example.com'
+    persistence:
+      class: satosa_openid4vci.persistence.federation_entity.FEPersistence
+      kwargs:
+        storage:
+          class: "satosa_openid4vci.core.storage.file.FilesystemDB"
+          kwargs:
+            fdir: "fe_storage"
+            key_conv: "idpyoidc.util.Base64"
+            value_conv: "idpyoidc.util.JSON"
     key_config:
       key_defs:
         - type: "RSA"
@@ -12,15 +21,41 @@ op:
       organization_name: The OP operator
       homepage_uri: https://op.example.com
       contacts: operations@op.example.com
-    authority_hints: TA_ID
-    endpoints: LEAF_ENDPOINTS
-    trust_anchors: ANCHOR
+    authority_hints:
+      - "https://ta.example.com"
+    endpoints:
+      entity_configuration:
+        path: ".well-known/openid-federation"
+        class: 'fedservice.entity.server.entity_configuration.EntityConfiguration'
+    trust_anchors:
+      https://trust_anchor.example.com:
+        keys:
+          - kty: 'RSA'
+            use: 'sig'
+            kid: 'OGFxMFJ6LXJFM3dWTWlzLXBHcUwydGY2Z3Vhb2hObXhkN0lIVllkLVJaSQ'
+            n: 'qeAZsdVwA90eNL-HJ9u3wsb_6pmz4GAkuLFtcYH2HzHHg7EIANOw9avhd3rzPgIpjjWFqFO6s3jiU_fSpFSadOKDZVPVnMc1m1PjmsnZinhjEBadKm9m1krvy2iDqMeJFQpjgSZ_Jwki2KCNuny_ESoyvQ5YJF50_HHhxxVCEi7h-Mta18ToQ5XEmCj1Sqcipjg55n_X8xUVL_L_OdU75_ICKMnTgFRXVNG5JQ_BQQoBenqBdIyhRMvZESLCRJoeScqByfrgEyBnrLac7P11aU3mnxCybmrBK98dKDkDRgONd3FRpjsF3D1lc_NA_U-i8sFkH_K998i1ykokwC6jPQ'
+            e: 'AQAB'
+          - kty: 'EC'
+            use: 'sig'
+            kid: 'dWpnd1A4NndNUTEzZlFfV2NsVjhnRE1zYTVlQ2xEZTdDR0U5SDNHX185VQ'
+            crv: 'P-256'
+            x: '2WQD73J1HcMQs8gZq43o2YvwgbKm1j_SHJgseUgniko'
+            y: 'Pn_HidM6WjUJhAnAYKTdNaLVcM2ChgUgQgZXW4lY6bs'
     entity_type:
       openid_provider:
-        class: ServerEntity
+        class: fedservice.op.ServerEntity
         kwargs:
           config:
             issuer: https://example.com/
+            persistence:
+              class: satosa_openid4vci.persistence.federation_entity.FEPersistence
+              kwargs:
+                storage:
+                  class: "satosa_openid4vci.core.storage.file.FilesystemDB"
+                  kwargs:
+                    fdir: "op_storage"
+                    key_conv: "idpyoidc.util.Base64"
+                    value_conv: "idpyoidc.util.JSON"
             httpc_params:
               verify: false
               timeout: 1
@@ -47,7 +82,19 @@ op:
               code:
                 lifetime: 600
                 kwargs:
-                  crypt_conf: CRYPT_CONFIG
+                  crypt_conf:
+                    kwargs:
+                      iterations: 1
+                      keys:
+                        key_defs:
+                          - kid: 'password'
+                            type: 'OCT'
+                            use:
+                              - 'enc'
+                          - kid: 'salt'
+                            type: 'OCT'
+                            use:
+                              - 'enc'
               token:
                 class: idpyoidc.server.token.jwt_token.JWTToken
                 kwargs:
@@ -112,4 +159,20 @@ op:
                     client_assertion:
                       class": openid4v.openid_credential_issuer.client_authn.ClientAssertion
             template_dir: template
-            session_params: SESSION_PARAMS
+            session_params:
+              encrypter:
+                kwargs:
+                  iterations: 1
+                  keys:
+                    key_defs:
+                      -
+                        kid: 'password'
+                        type: 'OCT'
+                        use:
+                          - 'enc'
+                      -
+                        kid: 'salt'
+                        type: 'OCT'
+                        use:
+                          - 'enc'
+

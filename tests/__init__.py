@@ -1,3 +1,4 @@
+from cryptojwt.utils import importer
 from fedservice.entity import FederationEntity
 from fedservice.entity.utils import get_federation_entity
 
@@ -93,3 +94,110 @@ def create_trust_chain(leaf, *entity):
         chain.append(_endpoint.process_request(_req)["response"])
 
     return chain
+
+
+def execute_function(function, **kwargs):
+    if isinstance(function, str):
+        return importer(function)(**kwargs)
+    else:
+        return function(**kwargs)
+
+
+def federation_setup():
+    TA_ID = "https://ta.example.org"
+    WP_ID = "https://wp.example.org"
+    PID_ID = "https://pid.example.org"
+
+    entity = {}
+
+    ##################
+    # TRUST ANCHOR
+    ##################
+
+    kwargs = {
+        "entity_id": TA_ID,
+        "preference": {
+            "organization_name": "The example federation operator",
+            "homepage_uri": "https://ta.example.com",
+            "contacts": "operations@ta.example.com"
+        }
+    }
+    trust_anchor = execute_function('entities.ta.main', **kwargs)
+    trust_anchors = {TA_ID: trust_anchor.keyjar.export_jwks()}
+    entity["trust_anchor"] = trust_anchor
+
+    ########################################
+    # Wallet provider
+    ########################################
+
+    kwargs = {
+        "entity_id": WP_ID,
+        "preference": {
+            "organization_name": "The Wallet Provider",
+            "homepage_uri": "https://wp.example.com",
+            "contacts": "operations@wp.example.com"
+        },
+        "authority_hints": [TA_ID],
+        "trust_anchors": trust_anchors
+    }
+    wallet_provider = execute_function("entities.wallet_provider.main", **kwargs)
+
+    trust_anchor.server.subordinate[WP_ID] = {
+        "jwks": wallet_provider['federation_entity'].keyjar.export_jwks(),
+        'authority_hints': [TA_ID],
+        "registration_info": {"entity_types": ["federation_entity", "wallet_provider"]},
+    }
+    entity["wallet_provider"] = wallet_provider
+
+
+    #########################################
+    # OpenidCredentialIssuer - PID version
+    #########################################
+
+
+    kwargs = {
+        "entity_id": PID_ID,
+        "preference": {
+            "organization_name": "The OpenID PID Credential Issuer",
+            "homepage_uri": "https://pid.example.com",
+            "contacts": "operations@pid.example.com"
+        },
+        "authority_hints": [TA_ID],
+        "trust_anchors": trust_anchors
+    }
+
+    pid = execute_function("entities.pid.main", **kwargs)
+
+    trust_anchor.server.subordinate[PID_ID] = {
+        "jwks": pid['federation_entity'].keyjar.export_jwks(),
+        'authority_hints': [TA_ID],
+        "registration_info": {"entity_types": ["federation_entity", "openid_credential_issuer"]},
+    }
+    entity["pid_issuer"] = pid
+
+    return entity
+
+
+WALLET_ID = "s6BhdRkqt3"
+
+
+def wallet_setup(federation):
+    #########################################
+    # Wallet
+    #########################################
+
+    _anchor = federation["trust_anchor"]
+    trust_anchors = {_anchor.entity_id: _anchor.keyjar.export_jwks()}
+
+    kwargs = {
+        "entity_id": WALLET_ID,
+        "trust_anchors": trust_anchors
+    }
+    wallet = execute_function("entities.wallet.main", **kwargs)
+
+    # Need the wallet providers public keys. Could get this from the metadata
+    wallet["federation_entity"].keyjar.import_jwks(
+        federation["wallet_provider"]["wallet_provider"].context.keyjar.export_jwks(),
+        federation["wallet_provider"].entity_id)
+
+    return wallet
