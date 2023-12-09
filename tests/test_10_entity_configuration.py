@@ -1,20 +1,23 @@
 import os
+import sys
 
-import pytest
-import responses
 from cryptojwt.jws.jws import factory
 from idpyoidc.util import load_yaml_config
 from idpyoidc.util import rndstr
 from openid4v.client.client_authn import ClientAuthenticationAttestation
+import pytest
+import responses
 from satosa.state import State
+
 from satosa_openid4vci.core import ExtendedContext
 from satosa_openid4vci.openid4vci import OpenID4VCIFrontend
-
 from tests import create_trust_chain_messages
 from tests import federation_setup
 from tests import wallet_setup
 
 BASEDIR = os.path.abspath(os.path.dirname(__file__))
+
+sys.path.insert(0, ".")
 
 
 def full_path(local_file):
@@ -84,9 +87,8 @@ class TestFrontEnd():
         client_id = srv.thumbprint_in_cnf_jwk
         srv.wallet_instance_attestation[client_id] = wia
 
-
         # done with the wallet provider now for the PID issuer
-        
+
         pid_issuer = self.entity["pid_issuer"].entity_id
         handler = self.wallet["pid_eaa_consumer"]
         _actor = handler.get_consumer(pid_issuer)
@@ -95,6 +97,16 @@ class TestFrontEnd():
         else:
             actor = _actor
 
+        where_and_what = create_trust_chain_messages(self.entity["pid_issuer"],
+                                                     self.entity["trust_anchor"])
+        with responses.RequestsMock() as rsps:
+            for _url, _jwks in where_and_what.items():
+                rsps.add("GET", _url, body=_jwks,
+                         adding_headers={"Content-Type": "application/json"}, status=200)
+
+            # collect metadata for PID issuer
+            pid_issuer_metadata = self.wallet["federation_entity"].get_verified_metadata(pid_issuer)
+
         authz_details = {
             "type": "openid_credential",
             "format": "vc+sd-jwt",
@@ -102,13 +114,22 @@ class TestFrontEnd():
                 "type": "PersonIdentificationData"
             }
         }
+        _service = actor.get_service("authorization")
+        _service.certificate_issuer_id = pid_issuer
+        _state = rndstr()
+        _a_req = _service.get_request_parameters(
+            request_args={'authorization_details': [authz_details],
+                          'redirect_uri': 'eudiw://start.wallet.example.org',
+                          "state": _state},
+            endpoint="")
+
         # Create authorization request
         authz_request = {
             'authorization_details': [authz_details],
             'response_type': 'code',
             'client_id': client_id,
             'redirect_uri': 'eudiw://start.wallet.example.org',
-            "state": rndstr()
+
         }
 
         # Create the client attestation
@@ -122,12 +143,7 @@ class TestFrontEnd():
                 issuer_id=srv.thumbprint_in_cnf_jwk)[0]
 
         )
-            # entity_id="https://example.com",
-            # signing_key=,
-            # audience="https://server.example.com",
-            # jwt_lifetime=3600,
-            # jwt_pop_lifetime=300,
-            # nonce="nonce"
+
         kwargs = {}
 
         _service = actor.get_service("authorization")
@@ -161,4 +177,41 @@ class TestFrontEnd():
 
             _parsed_req = endpoint.parse_request(request=req_info["request"])
 
-        assert _parsed_req
+        _pa_response = endpoint.process_request(_parsed_req)
+        assert _pa_response
+
+        # Now for the authz request to the authz endpoint
+
+        request = {
+            "request_uri": _pa_response["http_response"]["request_uri"],
+            "redirect_uri": authz_request["redirect_uri"],
+            "response_type": ["code"],
+            'client_id': client_id
+        }
+
+        endpoint = self.entity["pid_issuer"]["openid_credential_issuer"].get_endpoint(
+            "authorization")
+
+        _auth_request = endpoint.parse_request(request)
+        _auth_response = endpoint.process_request(_auth_request)
+        assert _auth_response
+
+        #  token endpoint
+        # Create a new client attestation
+
+        token_request = {
+            'grant_type': 'authorization_code',
+            'code': _auth_response["code"],
+            'redirect_uri': authz_request["redirect_uri"],
+            'client_id': client_id,
+            'state': _state,
+        }
+        _cls = ClientAuthenticationAttestation()
+        _cls.construct(
+            request=token_request,
+            thumbprint=srv.thumbprint_in_cnf_jwk,
+            wallet_instance_attestation=wia,
+            audience=pid_issuer,
+            signing_key=self.wallet["wallet"].keyjar.get_signing_key(
+                issuer_id=srv.thumbprint_in_cnf_jwk)[0]
+        )
