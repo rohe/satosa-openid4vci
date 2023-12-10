@@ -68,7 +68,7 @@ def main(entity_id: str,
                                 "class": "openid4v.openid_credential_issuer.access_token.Token",
                                 "kwargs": {
                                     "client_authn_method": [
-                                        "private_key_jwt"
+                                        "client_assertion"
                                     ]
                                 }
                             },

@@ -80,7 +80,10 @@ def main(entity_id: str,
                             },
                             "pid_eaa_token": {
                                 "class": "openid4v.client.pid_eaa.AccessToken",
-                                "kwargs": {}
+                                "kwargs": {
+                                    "client_authn_methods": {"client_assertion": ClientAssertion},
+                                    "default_authn_method": None
+                                }
                             },
                             "credential": {
                                 "path": "credential",
