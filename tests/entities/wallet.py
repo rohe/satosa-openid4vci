@@ -6,6 +6,7 @@ from idpyoidc.client.defaults import DEFAULT_KEY_DEFS
 from idpyoidc.client.oauth2 import Client
 
 from openid4v.client.client_authn import ClientAssertion
+from openid4v.client.client_authn import DPoPHeader
 from openid4v.client.pid_eaa_consumer import PidEaaHandler
 from openid4v.client.wallet_instance_attestation import WalletInstanceAttestation
 
@@ -88,7 +89,10 @@ def main(entity_id: str,
                             "credential": {
                                 "path": "credential",
                                 "class": 'openid4v.client.pid_eaa.Credential',
-                                "kwargs": {}
+                                "kwargs": {
+                                    "client_authn_methods": {"dpop_header": DPoPHeader},
+                                    "default_authn_method": None
+                                }
                             }
                         }
                     }

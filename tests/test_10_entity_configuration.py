@@ -1,16 +1,16 @@
 import os
 import sys
 
-import pytest
-import responses
 from cryptojwt.jws.jws import factory
 from idpyoidc.util import load_yaml_config
 from idpyoidc.util import rndstr
 from openid4v.client.client_authn import ClientAuthenticationAttestation
+import pytest
+import responses
 from satosa.state import State
+
 from satosa_openid4vci.core import ExtendedContext
 from satosa_openid4vci.openid4vci import OpenID4VCIFrontend
-
 from tests import create_trust_chain_messages
 from tests import federation_setup
 from tests import wallet_setup
@@ -106,6 +106,8 @@ class TestFrontEnd():
 
             # collect metadata for PID issuer
             pid_issuer_metadata = self.wallet["federation_entity"].get_verified_metadata(pid_issuer)
+
+        actor.context.provider_info = pid_issuer_metadata['openid_credential_issuer']
 
         # _service = actor.get_service("authorization")
         # _service.certificate_issuer_id = pid_issuer
@@ -215,19 +217,45 @@ class TestFrontEnd():
         )
 
         _service = actor.get_service("accesstoken")
-        where_and_what = create_trust_chain_messages(self.entity["wallet_provider"],
-                                                     self.entity["trust_anchor"])
-        with responses.RequestsMock() as rsps:
-            for _url, _jwks in where_and_what.items():
-                rsps.add("GET", _url, body=_jwks,
-                         adding_headers={"Content-Type": "application/json"}, status=200)
-
-            req_info = _service.get_request_parameters(token_request, **kwargs)
+        req_info = _service.get_request_parameters(token_request, **kwargs)
 
         # ---- Switch to the server side. The PID issuer
 
         endpoint = self.entity["pid_issuer"]["openid_credential_issuer"].get_endpoint("token")
+        _http_info = {
+            "headers": req_info["headers"],
+            "method": req_info["method"],
+            "url": req_info["url"],
+        }
 
-        _parsed_req = endpoint.parse_request(request=req_info["request"])
+        _parsed_req = endpoint.parse_request(request=req_info["request"], http_info=_http_info)
         _token_response = endpoint.process_request(_parsed_req)
         assert _token_response
+        _service.upstream_get("context").cstate.update(_state, _token_response["response_args"])
+
+        # And now for the PID issuance
+        pid_request = {
+            'format': 'vc+sd-jwt',
+            'credential_definition': {'type': ['PersonIdentificationData']},
+            "access_token": _token_response["response_args"]["access_token"]
+        }
+        _service = actor.get_service("credential")
+        cred_req_info = _service.get_request_parameters(pid_request, **kwargs)
+
+        assert cred_req_info
+
+        # ---- Switch to the server side. The PID issuer
+
+        endpoint = self.entity["pid_issuer"]["openid_credential_issuer"].get_endpoint("credential")
+
+        _http_info = {
+            "headers": cred_req_info["headers"],
+            "method": cred_req_info["method"],
+            "url": cred_req_info["url"],
+        }
+        _parsed_req = endpoint.parse_request(request=cred_req_info["request"],
+                                             http_info=_http_info)
+
+        _cred_response = endpoint.process_request(_parsed_req)
+        assert _cred_response
+
