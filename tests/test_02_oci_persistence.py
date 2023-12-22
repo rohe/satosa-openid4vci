@@ -8,10 +8,8 @@ from cryptojwt.key_jar import init_key_jar
 from idpyoidc.client.defaults import DEFAULT_KEY_DEFS
 from idpyoidc.message.oidc import AccessTokenRequest
 from idpyoidc.message.oidc import AuthorizationRequest
-from idpyoidc.server import Server
 from idpyoidc.server.authn_event import create_authn_event
-from idpyoidc.server.util import execute
-from satosa_openid4vci.persistence.openid_provider import OPPersistence
+from satosa_openid4vci.openid_credential_issuer import OpenidCredentialIssuer
 
 BASEDIR = os.path.abspath(os.path.dirname(__file__))
 
@@ -75,6 +73,19 @@ SERVER_CONF = {
             },
         },
     },
+    "persistence": {
+        "class": "satosa_openid4vci.persistence.openid_provider.OPPersistence",
+        "kwargs": {
+            "storage": {
+                "class": "satosa_openid4vci.core.storage.file.FilesystemDB",
+                "kwargs": {
+                    "fdir": "op_storage",
+                    "key_conv": "idpyoidc.util.Base64",
+                    "value_conv": "idpyoidc.util.JSON"
+                }
+            }
+        }
+    },
     "session_params": SESSION_PARAMS,
     "template_dir": "template",
     "claims_interface": {
@@ -84,17 +95,9 @@ SERVER_CONF = {
     "userinfo": {
         "class": "idpyoidc.server.user_info.UserInfo",
         "kwargs": {"db_file": full_path("users.json")},
-    },
-}
-
-STORE_CONF = {
-    "class": "satosa_openid4vci.core.storage.file.FilesystemDB",
-    "kwargs": {
-        "fdir": "storage",
-        "key_conv": "idpyoidc.util.Base64",
-        "value_conv": "idpyoidc.util.JSON"
     }
 }
+
 
 AUTH_REQ = AuthorizationRequest(
     client_id="client_1",
@@ -146,7 +149,7 @@ CLIENT_INFO_2 = {
 KEYJAR_2 = init_key_jar(key_defs=DEFAULT_KEY_DEFS)
 
 
-class TestOPPersistence(object):
+class TestOCIPersistence(object):
 
     @pytest.fixture(autouse=True)
     def create_persistence_layer(self):
@@ -156,12 +159,11 @@ class TestOPPersistence(object):
         except FileNotFoundError:
             pass
 
+        self.server = OpenidCredentialIssuer(SERVER_CONF)
+        # storage = execute(STORE_CONF)
+        # self.server.persistence = OPPersistence(storage, upstream_get=self.server.unit_get)
 
-        self.server = Server(SERVER_CONF)
-        storage = execute(STORE_CONF)
-        self.server.persistence = OPPersistence(storage, upstream_get=self.server.unit_get)
-
-        #self.session_manager = self.server.context.session_manager
+        # self.session_manager = self.server.context.session_manager
         self.user_id = "diana"
 
     def _create_session(self, auth_req, sub_type="public", sector_identifier="",

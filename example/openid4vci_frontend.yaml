@@ -1,0 +1,181 @@
+module: satosa_openid4vci.openid4vci.OpenID4VCIFrontend
+name: OIDC
+
+config:
+  domain: &domain localhost
+  server_name: *domain
+  base_url: &base_url <base_url>
+
+  storage:
+    class: "satosa_oidcop.core.storage.file.FilesystemDB"
+    kwargs:
+      fdir: "storage"
+      key_conv: "idpyoidc.util.Base64"
+      value_conv: "idpyoidc.util.JSON"
+
+  default_target_backend: oidc
+  salt_size: 8
+
+  op:
+    server_info:
+      entity_id: *base_url
+      persistence:
+        class: satosa_openid4vci.persistence.federation_entity.FEPersistence
+        kwargs:
+          storage:
+            class: "satosa_openid4vci.core.storage.file.FilesystemDB"
+            kwargs:
+              fdir: "fe_storage"
+              key_conv: "idpyoidc.util.Base64"
+              value_conv: "idpyoidc.util.JSON"
+      key_config:
+        key_defs:
+          - type: "RSA"
+            use: [ "sig" ]
+          - type: "EC"
+            crv: "P-256"
+            use: [ "sig" ]
+        private_path: "private/pid_fed_keys.json"
+        read_only: false
+      preference:
+        organization_name: The OP operator
+        contacts: operations@op.example.com
+      authority_hints: !include federation_entities/cred/pid_authority_hints.json
+      trust_marks: !include federation_entities/cred/pid_trust_marks.json
+      endpoints:
+        entity_configuration:
+          path: ".well-known/openid-federation"
+          class: 'fedservice.entity.server.entity_configuration.EntityConfiguration'
+      trust_anchors: !include federation_entities/cred/pid_trust_anchors.json
+      entity_type:
+        openid_credential_issuer:
+          class: fedservice.op.ServerEntity
+          kwargs:
+            server_type: "oauth2"
+            config:
+              issuer: *base_url
+              persistence:
+                class: satosa_openid4vci.persistence.federation_entity.FEPersistence
+                kwargs:
+                  storage:
+                    class: "satosa_openid4vci.core.storage.file.FilesystemDB"
+                    kwargs:
+                      fdir: "op_storage"
+                      key_conv: "idpyoidc.util.Base64"
+                      value_conv: "idpyoidc.util.JSON"
+              httpc_params:
+                verify: false
+                timeout: 1
+              preference:
+                subject_types_supported:
+                  - public
+                  - pairwise
+                  - ephemeral
+                grant_types_supported:
+                  - authorization_code
+                  - implicit
+                  - urn:ietf:params:oauth:grant-type:jwt-bearer
+                  - refresh_token
+              token_handler_args:
+                jwks_def:
+                  private_path: private/token_jwks.json
+                  read_only: false
+                  key_defs:
+                    - type: oct
+                      bytes: '24'
+                      use:
+                        - enc
+                      kid: code
+                code:
+                  lifetime: 600
+                  kwargs:
+                    crypt_conf:
+                      kwargs:
+                        iterations: 1
+                        keys:
+                          key_defs:
+                            - kid: 'password'
+                              type: 'OCT'
+                              use:
+                                - 'enc'
+                            - kid: 'salt'
+                              type: 'OCT'
+                              use:
+                                - 'enc'
+                token:
+                  class: idpyoidc.server.token.jwt_token.JWTToken
+                  kwargs:
+                    lifetime: 3600
+                    add_claims_by_scope: true
+                id_token:
+                  class: idpyoidc.server.token.id_token.IDToken
+                  kwargs:
+                    base_claims:
+                      email:
+                        essential: true
+                      email_verified:
+                        essential: true
+              keys:
+                key_defs:
+                  - type: "RSA"
+                    use: [ "sig" ]
+                  - type: "EC"
+                    crv: "P-256"
+                    use: [ "sig" ]
+                uri_path: static/jwks.json
+                private_path: private/jwks.json
+                read_only: false
+              endpoint:
+                authorization:
+                  path: authorization
+                  class: openid4v.openid_credential_issuer.authorization.Authorization
+                  kwargs:
+                    response_modes_supported:
+                      - query
+                      - fragment
+                      - form_post
+                    claim_types_supported:
+                      - normal
+                      - aggregated
+                      - distributed
+                    claims_parameter_supported: true
+                    request_parameter_supported: true
+                    request_uri_parameter_supported: true
+                token:
+                  path: token
+                  class: openid4v.openid_credential_issuer.access_token.Token
+                  kwargs:
+                    client_authn_methods:
+                      - client_secret_post
+                      - client_secret_basic
+                      - client_secret_jwt
+                      - private_key_jwt
+                credential:
+                  path: credential
+                  class: openid4v.openid_credential_issuer.credential.Credential
+                  kwargs:
+                    client_authn_methods:
+                      dpop_client_auth: idpyoidc.server.oauth2.add_on.dpop.DPoPClientAuth
+                pushed_authorization:
+                  path: pushed_authorization
+                  class: idpyoidc.server.oauth2.pushed_authorization.PushedAuthorization
+                  kwargs:
+                    client_authn_methods:
+                      client_assertion: openid4v.openid_credential_issuer.client_authn.ClientAssertion
+              template_dir: template
+              session_params:
+                encrypter:
+                  kwargs:
+                    iterations: 1
+                    keys:
+                      key_defs:
+                        - kid: 'password'
+                          type: 'OCT'
+                          use:
+                            - 'enc'
+                        - kid: 'salt'
+                          type: 'OCT'
+                          use:
+                            - 'enc'
+                      private_path: private/session.jwks
+                      read_only: false

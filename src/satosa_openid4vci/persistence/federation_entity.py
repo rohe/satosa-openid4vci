@@ -26,11 +26,19 @@ class FEPersistence(object):
     def restore_federation_cache(self):
         _entity = self.upstream_get("unit")
         _cache = ESCache()
-        _cache.load(self.storage.fetch(information_type="entity_configuration"))
+        _info = self.storage.fetch(information_type="entity_configuration")
+        if _info:
+            _cache.load(_info)
+        else:
+            logger.debug("No Entity Configurations cached")
         _entity.function.trust_chain_collector.config_cache = _cache
 
         _cache = ESCache()
-        _cache.load(self.storage.fetch(information_type="entity_statement"))
+        _info = self.storage.fetch(information_type="entity_statement")
+        if _info:
+            _cache.load(_info)
+        else:
+            logger.debug("No Entity Statements cached")
         _entity.function.trust_chain_collector.entity_statement_cache = _cache
 
     def store_federation_keys(self):
@@ -48,9 +56,12 @@ class FEPersistence(object):
         keyjar = KeyJar()
         for entity_id in self.storage.keys_by_information_type("fed_jwks"):
             jwks = self.storage.fetch(information_type="fed_jwks", key=entity_id)
-            if entity_id == '__':
-                entity_id = ""
-            keyjar.import_jwks(jwks, entity_id)
+            if jwks:
+                if entity_id == '__':
+                    entity_id = ""
+                keyjar.import_jwks(jwks, entity_id)
+            else:
+                logger.debug(f"No jwks for {entity_id}")
         self.upstream_get("unit").keyjar = keyjar
 
     def store_trust_chains(self):
@@ -60,9 +71,10 @@ class FEPersistence(object):
             self.storage.store(information_type="trust_chain", value=_chains)
 
     def restore_trust_chains(self):
-        _entity = self.upstream_get("unit")
         _chains = self.storage.fetch(information_type="trust_chain")
-        _entity.trust_chain = [TrustChain(**v) for v in _chains]
+        if _chains:
+            _entity = self.upstream_get("unit")
+            _entity.trust_chain = [TrustChain(**v) for v in _chains]
 
     def reset_state(self):
         _entity = self.upstream_get("unit")

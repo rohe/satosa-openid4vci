@@ -1,0 +1,1 @@
+./exec.py start wp tmi dc4eu

@@ -3,9 +3,9 @@ import logging
 from typing import Optional
 from typing import Union
 
+from cryptojwt import as_unicode
 from cryptojwt import JWT
 from cryptojwt import KeyJar
-from cryptojwt import as_unicode
 from cryptojwt.exception import BadSignature
 from cryptojwt.exception import Invalid
 from cryptojwt.exception import MissingKey
@@ -15,6 +15,7 @@ from idpyoidc.message.oidc import JsonWebToken
 from idpyoidc.server.client_authn import basic_authn
 from idpyoidc.server.exception import ClientAuthenticationError
 from idpyoidc.util import sanitize
+from openid4v.message import AuthorizationRequest
 
 logger = logging.getLogger(__name__)
 
@@ -104,17 +105,25 @@ class OPPersistence(object):
         _session_info = self.storage.fetch(information_type="session_info", key="")
 
         self.flush_session_manager(sman)
-        sman.load(_session_info)
+        if _session_info:
+            sman.load(_session_info)
 
         # Find the client_id
         client_id = self._get_client_id(sman, request=request, http_info=http_info)
         # Update session
         _client_session_info = self.storage.fetch(information_type="client_session_info",
-                                                      key=client_id)
-        _session_info["db"] = _client_session_info
+                                                  key=client_id)
+        if _client_session_info is None:
+            _client_session_info = {}
+
+        if _session_info:
+            _session_info["db"] = _client_session_info
 
         self.flush_session_manager(sman)
-        sman.load(_session_info)
+
+        logger.debug(f"_session_info: {_session_info}")
+        if _session_info:
+            sman.load(_session_info)
 
         # Update client database
         self.restore_client_info(client_id)
@@ -143,8 +152,8 @@ class OPPersistence(object):
         _session_state = sman.dump()
         _client_session_info = self._get_client_session_info(client_id, _session_state["db"])
         self.storage.store(information_type="client_session_info",
-                               value=_client_session_info,
-                               key=client_id)
+                           value=_client_session_info,
+                           key=client_id)
         self.store_client_info(client_id)
         _session_state["db"] = {}
         self.storage.store(information_type="session_info", value=_session_state)
@@ -153,17 +162,20 @@ class OPPersistence(object):
         _context = self.upstream_get("context")
         # client info
         self.storage.store(information_type="client_info", key=client_id,
-                               value=_context.cdb[client_id])
+                           value=_context.cdb[client_id])
         # client keys
         self.storage.store(information_type="jwks", key=client_id,
-                               value=_context.keyjar.export_jwks(issuer=client_id))
+                           value=_context.keyjar.export_jwks(issuer=client_id))
 
     def restore_client_info(self, client_id: str) -> dict:
         _context = self.upstream_get("context")
         client_info = self.storage.fetch(information_type="client_info", key=client_id)
+        if client_info is None:
+            client_info = {}
         _context.cdb[client_id] = client_info
         jwks = self.storage.fetch(information_type="jwks", key=client_id)
-        _context.keyjar.import_jwks(jwks, client_id)
+        if jwks:
+            _context.keyjar.import_jwks(jwks, client_id)
         return client_info
 
     def restore_client_info_by_bearer_token(self, request_authorization: str):
@@ -216,10 +228,21 @@ class OPPersistence(object):
     def store_pushed_authorization(self):
         _context = self.upstream_get("context")
         par_db = getattr(_context, "par_db", None)
-        if par_db:
-            self.storage.store(information_type="par", value=par_db)
+        _db = {}
+        for k, v in par_db.items():
+            if isinstance(v, Message):
+                _db[k] = v.to_dict()
+            else:
+                _db[k] = v
+        logger.debug(f"store_pushed_authorization: {_db}")
+        if _db:
+            self.storage.store(information_type="par", value=_db)
 
     def restore_pushed_authorization(self):
         _context = self.upstream_get("context")
-        _par = self.storage.fetch(information_type="par")
+        _par = {}
+        for _uri, v in self.storage.fetch(information_type="par").items():
+            _par[_uri] = AuthorizationRequest(**v)
+
+        logger.debug(f"restore_pushed_authorization: {_par}")
         _context.par_db = _par

@@ -5,13 +5,15 @@ from idpyoidc.message.oauth2 import AccessTokenRequest
 from idpyoidc.message.oidc import TokenErrorResponse
 from idpyoidc.server.exception import NoSuchGrant
 from idpyoidc.server.exception import UnknownClient
+from openid4v.message import auth_detail_list_deser
+from openid4v.message import AuthorizationDetail
+from openid4v.message import AuthorizationRequest
 from satosa.context import Context
 from satosa_openid4vci.core import ExtendedContext
 from satosa_openid4vci.core.response import JsonResponse
-from satosa_openid4vci.utils import Openid4VCIUtils
-
 from satosa_openid4vci.core.response import JWSResponse
 from satosa_openid4vci.endpoint_wrapper.authorization import VCIAuthorization
+from satosa_openid4vci.utils import Openid4VCIUtils
 
 logger = logging.getLogger(__name__)
 
@@ -34,13 +36,15 @@ class Openid4VCIEndpoints(Openid4VCIUtils):
         :param context: the current context
         :return: HTTP response to the client
         """
-        jwks = self.app.server["openid_provider"].keyjar.export_jwks()
+        logger.debug("At the JWKS endpoint")
+        jwks = self.app.server["openid_credential_issuer"].keyjar.export_jwks()
         return JsonResponse(jwks)
 
     def _request_setup(self, context: ExtendedContext, entity_type: str, endpoint: str):
         _entity_type = self.app.server[entity_type]
         endpoint = _entity_type.get_endpoint(endpoint)
-        logger.info(f'Request at the "{endpoint.name}" endpoint')
+        logger.debug(20 * "=" + f'Request at the "{endpoint.name}" endpoint' + 20 * "-")
+        logger.debug(f"endpoint={endpoint}")
         http_info = self.get_http_info(context)
 
         return {
@@ -62,7 +66,8 @@ class Openid4VCIEndpoints(Openid4VCIUtils):
         _env = self._request_setup(context, entity_type="federation_entity",
                                    endpoint="entity_configuration")
 
-        parsed_req = self.parse_request(_env["endpoint"], context.request, http_info=_env["http_info"])
+        parsed_req = self.parse_request(_env["endpoint"], context.request,
+                                        http_info=_env["http_info"])
         proc_req = _env["endpoint"].process_request(parsed_req, http_info=_env["http_info"])
 
         info = _env["endpoint"].do_response(request=parsed_req, **proc_req)
@@ -73,8 +78,9 @@ class Openid4VCIEndpoints(Openid4VCIUtils):
         OAuth2 / OIDC Authorization endpoint
         Checks client_id and handles the authorization request
         """
-        _entity_type = self.app.server["openid_provider"]
-        _entity_type.restore_pushed_authorization()
+        logger.debug("At the Authorization Endpoint")
+        _entity_type = self.app.server["openid_credential_issuer"]
+        _entity_type.persistence.restore_pushed_authorization()
         _fed_entity = self.app.server["federation_entity"]
         _fed_entity.persistence.restore_state()
 
@@ -93,7 +99,7 @@ class Openid4VCIEndpoints(Openid4VCIUtils):
         :param context: the current context
         :return: HTTP response to the client
         """
-        _env = self._request_setup(context, "openid_provider", "token")
+        _env = self._request_setup(context, "openid_credential_issuer", "token")
 
         try:
             self.load_cdb(context)
@@ -109,9 +115,10 @@ class Openid4VCIEndpoints(Openid4VCIUtils):
 
         raw_request = AccessTokenRequest().from_urlencoded(urlencode(context.request))
 
+        _entity_type = _env["entity_type"]
         # in token endpoint we cannot parse a request without having loaded cdb and session first
         try:
-            _env["entity_type"].restore_state(raw_request, _env["http_info"])
+            _entity_type.persistence.restore_state(raw_request, _env["http_info"])
         except NoSuchGrant:
             _response = JsonResponse(
                 {
@@ -122,9 +129,9 @@ class Openid4VCIEndpoints(Openid4VCIUtils):
             )
             return self.send_response(_response)
 
-        parse_req = self.parse_request(_env["endpoint"], context, http_info=_env["http_info"])
+        parse_req = self.parse_request(_env["endpoint"], context.request, http_info=_env["http_info"])
         ec = _env["endpoint"].upstream_get("context")
-        _env["entity_type"].load_all_claims()
+        _entity_type.load_all_claims()
         proc_req = self.process_request(_env["endpoint"], context, parse_req, _env["http_info"])
         # flush as soon as possible, otherwise in case of an exception it would be
         # stored in the object ... until a next .load would happen ...
@@ -141,19 +148,19 @@ class Openid4VCIEndpoints(Openid4VCIUtils):
             )
 
         # should only be one client in the client db
-        _client_id = list(_env["entity_type"].context.cdb.keys())[0]
-        _env["entity_type"].persistence.store_state(_client_id)
+        _client_id = list(_entity_type.context.cdb.keys())[0]
+        _entity_type.persistence.store_state(_client_id)
 
         # better return jwt or jwe here!
         response = JsonResponse(proc_req["response_args"])
         return self.send_response(response)
 
     def credential_endpoint(self, context: ExtendedContext):
-        _env = self._request_setup(context, "openid_provider", "credential")
+        _env = self._request_setup(context, "openid_credential_issuer", "credential")
         _env["entity_type"].persistence.restore_state(context.request, _env["http_info"])
 
-        parse_req = self.parse_request(_env["endpoint"], context, http_info=_env["http_info"])
-        proc_req = self.process_request(_env["endpoint"], context, parse_req, _env["http_info"])
+        parse_req = self.parse_request(_env["endpoint"], context.request, http_info=_env["http_info"])
+        proc_req = self.process_request(_env["endpoint"], context.request, parse_req, _env["http_info"])
         if isinstance(proc_req, JsonResponse):  # pragma: no cover
             return self.send_response(proc_req)
 
@@ -164,16 +171,36 @@ class Openid4VCIEndpoints(Openid4VCIUtils):
         return self.send_response(response)
 
     def pushed_authorization_endpoint(self, context: ExtendedContext):
-        _env = self._request_setup(context, "openid_provider", "pushed_authorization")
+        _env = self._request_setup(context, "openid_credential_issuer", "pushed_authorization")
         _env["entity_type"].persistence.restore_state(context.request, _env["http_info"])
 
-        parse_req = self.parse_request(_env["endpoint"], context, http_info=_env["http_info"])
+        _env["endpoint"].request_format = "dict"
+        _env["endpoint"].request_cls = AuthorizationRequest
+
+        # This is not how it should be done, but it has to be done.
+        logger.debug(f"Before adl: {context.request['authorization_details']}")
+        adl = auth_detail_list_deser(context.request["authorization_details"], sformat="urlencoded")
+        logger.debug(f"adl: {adl} {type(adl)}")
+        context.request["authorization_details"] = [v.to_dict() for v in adl]
+
+        logger.debug(f"Incoming request: {context.request}")
+        parse_req = self.parse_request(_env["endpoint"], context.request, http_info=_env["http_info"])
+        logger.debug(f"Parsed request: {parse_req} {type(parse_req)}")
+        logger.debug(f"ad type: {type(context.request['authorization_details'][0])}")
+        logger.debug(f"cd type: {type(context.request['authorization_details'][0]['credential_definition'])}")
+        parse_req["authorization_details"] = [AuthorizationDetail(**item) for item in parse_req[
+            "authorization_details"]]
         proc_req = self.process_request(_env["endpoint"], context, parse_req, _env["http_info"])
         if isinstance(proc_req, JsonResponse):  # pragma: no cover
             return self.send_response(proc_req)
 
-        # The only thing that should have changed
+        # The only thing that should have changed on the application side
+        _env["entity_type"].persistence.store_client_info(parse_req["client_id"])
         _env["entity_type"].persistence.store_pushed_authorization()
+        # Also on the federation side
+        _fed_entity = self.app.server["federation_entity"]
+        _fed_entity.persistence.store_state()
 
-        response = JsonResponse(proc_req["response_args"].to_dict())
+        logger.debug(f"PAR response: {proc_req}")
+        response = JsonResponse(proc_req["http_response"])
         return self.send_response(response)

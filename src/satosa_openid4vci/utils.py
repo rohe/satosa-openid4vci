@@ -11,7 +11,6 @@ from idpyoidc.server.exception import ClientAuthenticationError
 from idpyoidc.server.exception import InvalidClient
 from idpyoidc.server.exception import UnAuthorizedClient
 from idpyoidc.server.exception import UnknownClient
-from satosa.attribute_mapping import AttributeMapper
 from satosa.context import Context
 
 from .core import ExtendedContext
@@ -140,8 +139,12 @@ class Openid4VCIUtils(object):
         response = JsonResponse(msg, status=status)
         return self.send_response(response)
 
+    def get_entity_type(self):
+        return self.app.server["openid_credential_issuer"]
+
     def send_response(self, response):
-        self.app.server["openid_provider"].persistence.flush_session_manager()
+        _entity_type = self.get_entity_type()
+        _entity_type.persistence.flush_session_manager()
         return response
 
     def load_cdb(self, context: ExtendedContext, client_id: Optional[str] = None) -> dict:
@@ -153,7 +156,7 @@ class Openid4VCIUtils(object):
         elif context.request and isinstance(context.request, dict):
             client_id = context.request.get("client_id")
 
-        _entity_type = self.app.server["openid_provider"]
+        _entity_type = self.get_entity_type()
         _ec = _entity_type.context
         _persistence = _entity_type.persistence
 
@@ -195,7 +198,7 @@ class Openid4VCIUtils(object):
 
         if client_info:
             logger.debug(
-                f"Loaded oidcop client from {self.app.storage.__class__.__name__}: {client_info}")
+                f"Loaded oidcop client: {client_info}")
         else:  # pragma: no cover
             logger.info(f'Cannot find "{client_id}" in client DB')
             raise UnknownClient(client_id)

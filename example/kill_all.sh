@@ -1,0 +1,1 @@
+./exec.py kill wp tmi dc4eu

@@ -6,16 +6,19 @@ from urllib.parse import urlencode
 from urllib.parse import urlparse
 
 import satosa
+from idpyoidc.message.oauth2 import AuthorizationErrorResponse
+from idpyoidc.message.oauth2 import AuthorizationResponse
 from idpyoidc.message.oauth2 import ResponseMessage
-from idpyoidc.message.oidc import AuthorizationErrorResponse
-from idpyoidc.message.oidc import AuthorizationRequest
 from idpyoidc.server import Endpoint
 from idpyoidc.server.authn_event import create_authn_event
+from openid4v.message import AuthorizationRequest
 from satosa_openid4vci.utils import Openid4VCIUtils
 
 from ..core import ExtendedContext
 from ..core.claims import combine_claim_values
 from ..core.response import JsonResponse
+
+logger = logging.getLogger(__name__)
 
 try:
     from satosa.context import add_prompt_to_context
@@ -32,12 +35,15 @@ logger = logging.getLogger(__name__)
 
 class VCIAuthorization(Openid4VCIUtils):
     name = "authorization"
+    msg_type = AuthorizationRequest
+    response_cls = AuthorizationResponse
+    error_msg = AuthorizationErrorResponse
 
     def __init__(self, app, auth_req_callback_func, converter):  # pragma: no cover
         Openid4VCIUtils.__init__(self, app)
         self.auth_req_callback_func = auth_req_callback_func
         self.converter = converter
-        self.entity_type = app.server["openid_provider"]
+        self.entity_type = app.server["openid_credential_issuer"]
 
     def __call__(self, context: ExtendedContext):
         """
@@ -47,7 +53,7 @@ class VCIAuthorization(Openid4VCIUtils):
         self.log_request(context, "Authorization endpoint request")
         self.load_cdb(context)
 
-        endpoint = self.app.server["openid_provider"].endpoint["authorization"]
+        endpoint = self.entity_type.endpoint["authorization"]
 
         self.get_http_info(context)
         internal_req = self.handle_authn_request(context, endpoint)
@@ -65,30 +71,31 @@ class VCIAuthorization(Openid4VCIUtils):
         :param context: the current context
         :return: the internal request
         """
-        self.log_request(context, "OIDC Authorization request from client")
+        self.log_request(context, "OAuth2 Authorization request from client")
+        logger.debug(f"{endpoint}")
+        logger.debug(f"request at frontend: {context.request}")
 
         http_info = self.get_http_info(context)
         self.load_cdb(context)
         parse_req = self.parse_request(
-            endpoint, context, http_info=http_info)
+            endpoint, context.request, http_info=http_info)
         if isinstance(parse_req, AuthorizationErrorResponse):
             logger.debug(f"{context.request}, {parse_req._dict}")
             return self.send_response(JsonResponse(parse_req._dict))
 
-        self.entity_type.persistence.restore_state(parse_req, endpoint, http_info)
+        self.entity_type.persistence.restore_state(parse_req, http_info)
 
-        proc_req = self.process_request(
-            endpoint, context, parse_req, http_info)
-        if isinstance(proc_req, JsonResponse):  # pragma: no cover
-            return proc_req
-
-        try:
-            endpoint.do_response(request=context.request, **proc_req)
-        except Exception as excp:  # pragma: no cover
-            # TODO - something to be done with the help of unit test
-            # this should be for humans if auth code flow
-            # and JsonResponse for other flows ...
-            self.handle_error(excp=excp)
+        # proc_req = self.process_request(endpoint, context, parse_req, http_info)
+        # if isinstance(proc_req, JsonResponse):  # pragma: no cover
+        #     return proc_req
+        #
+        # try:
+        #     endpoint.do_response(request=context.request, **proc_req)
+        # except Exception as excp:  # pragma: no cover
+        #     # TODO - something to be done with the help of unit test
+        #     # this should be for humans if auth code flow
+        #     # and JsonResponse for other flows ...
+        #     self.handle_error(excp=excp)
 
         context.state[self.name] = {"oidc_request": context.request}
 
@@ -109,15 +116,11 @@ class VCIAuthorization(Openid4VCIUtils):
 
         _claims_supported = endpoint.upstream_get("context").get_preference("claims_supported")
 
-        # TODO - additional filter here?
-        # _approved_attributes = self._get_approved_attributes(
-        # _claims_supported, authn_req
-        # )
-        internal_req.attributes = self.converter.to_internal_filter(
-            "openid", _claims_supported
-        )
+        logger.debug(f"Claims supported: {_claims_supported}")
 
-        # TODO - have a default backend, otherwise exception here ...
+        if _claims_supported:
+            internal_req.attributes = self.converter.to_internal_filter("openid", _claims_supported)
+
         context.target_backend = self.app.default_target_backend
         context.internal_data = internal_req
         return internal_req
@@ -241,11 +244,9 @@ class VCIAuthorization(Openid4VCIUtils):
         :type internal_resp: satosa.internal.InternalData
         :rtype satosa.response.SeeOther
         """
-        _claims = self.converter.from_internal(
-            "openid", internal_resp.attributes)
+        _claims = self.converter.from_internal("openid", internal_resp.attributes)
         claims = {k: v for k, v in _claims.items() if v}
-        combined_claims = dict(
-            [i for i in combine_claim_values(claims.items())])
+        combined_claims = dict([i for i in combine_claim_values(claims.items())])
 
         response = self._handle_backend_response(context, internal_resp)
         # TODO - why should we have to delete it?
