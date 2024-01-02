@@ -1,9 +1,8 @@
 import logging
 
-from cryptojwt.jws.jws import factory
-from idpysdjwt.verifier import display_sdjwt
 import werkzeug
 from cryptojwt import JWT
+from cryptojwt.jws.jws import factory
 from cryptojwt.utils import b64e
 from fedservice.entity import get_verified_trust_chains
 from flask import Blueprint
@@ -15,7 +14,7 @@ from flask import session
 from flask.helpers import send_from_directory
 from idpyoidc.client.defaults import CC_METHOD
 from idpyoidc.util import rndstr
-
+from idpysdjwt.verifier import display_sdjwt
 from openid4v.message import WalletInstanceAttestationJWT
 
 logger = logging.getLogger(__name__)
@@ -95,7 +94,7 @@ def wallet_instance_attestation():
     session["thumbprint_in_cnf_jwk"] = _ass["cnf"]["jwk"]["kid"]
 
     return render_template('wallet_instance_attestation.html',
-                           req_assertion = req_assertion,
+                           req_assertion=req_assertion,
                            request_headers=_ra_jwt.jwt.headers,
                            req_info=req_info,
                            wallet_instance_attestation=_ass,
@@ -117,7 +116,6 @@ def picking_pid_issuer():
         res.extend(
             current_app.federation_entity.trawl(ta_id, entity_id,
                                                 entity_type="openid_credential_issuer"))
-
 
     credential_issuers = res
 
@@ -272,6 +270,11 @@ def credential():
     _req_args = consumer.context.cstate.get_set(session["state"], claim=["access_token"])
     trust_chains = get_verified_trust_chains(consumer, consumer.context.issuer)
     trust_chain = trust_chains[0]
+    wallet_entity = current_app.server["wallet"]
+    wallet_entity.keyjar.load_keys(issuer_id=consumer.context.issuer,
+                                   jwks_uri=trust_chain.metadata["openid_credential_issuer"]["jwks_uri"])
+    consumer.context.keyjar = wallet_entity.keyjar
+
     resp = consumer.do_request(
         "credential",
         request_args={

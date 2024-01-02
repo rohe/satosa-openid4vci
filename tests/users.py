@@ -1,5 +1,5 @@
 """
-A static dictionary with SAML testusers that can be used as response.
+A static dictionary with SAML test users that can be used as response.
 """
 
 from satosa.frontends.openid_connect import combine_claim_values

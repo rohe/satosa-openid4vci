@@ -1,6 +1,7 @@
 import logging
 from urllib.parse import urlencode
 
+from idpyoidc.message import Message
 from idpyoidc.message.oauth2 import AccessTokenRequest
 from idpyoidc.message.oidc import TokenErrorResponse
 from idpyoidc.server.exception import NoSuchGrant
@@ -37,7 +38,7 @@ class Openid4VCIEndpoints(Openid4VCIUtils):
         :return: HTTP response to the client
         """
         logger.debug("At the JWKS endpoint")
-        jwks = self.app.server["openid_credential_issuer"].keyjar.export_jwks()
+        jwks = self.app.server["openid_credential_issuer"].context.keyjar.export_jwks("")
         return JsonResponse(jwks)
 
     def _request_setup(self, context: ExtendedContext, entity_type: str, endpoint: str):
@@ -63,6 +64,8 @@ class Openid4VCIEndpoints(Openid4VCIUtils):
         :return: HTTP response to the client
         :rtype: satosa.response.Response
         """
+        logger.debug(f"provider_info: {self.app.server['openid_credential_issuer'].context.provider_info}")
+
         _env = self._request_setup(context, entity_type="federation_entity",
                                    endpoint="entity_configuration")
 
@@ -131,11 +134,11 @@ class Openid4VCIEndpoints(Openid4VCIUtils):
 
         parse_req = self.parse_request(_env["endpoint"], context.request, http_info=_env["http_info"])
         ec = _env["endpoint"].upstream_get("context")
-        _entity_type.load_all_claims()
+        # _entity_type.persistence.load_all_claims()
         proc_req = self.process_request(_env["endpoint"], context, parse_req, _env["http_info"])
-        # flush as soon as possible, otherwise in case of an exception it would be
-        # stored in the object ... until a next .load would happen ...
-        ec.userinfo.flush()
+
+        # if ec.userinfo != None:
+        #     ec.userinfo.flush()
 
         if isinstance(proc_req, JsonResponse):  # pragma: no cover
             return self.send_response(proc_req)
@@ -159,15 +162,19 @@ class Openid4VCIEndpoints(Openid4VCIUtils):
         _env = self._request_setup(context, "openid_credential_issuer", "credential")
         _env["entity_type"].persistence.restore_state(context.request, _env["http_info"])
 
+        logger.debug(f"request: {context.request}")
+        logger.debug(f"https_info: {_env['http_info']}")
         parse_req = self.parse_request(_env["endpoint"], context.request, http_info=_env["http_info"])
+        logger.debug(f"parse_req: {parse_req}")
         proc_req = self.process_request(_env["endpoint"], context.request, parse_req, _env["http_info"])
         if isinstance(proc_req, JsonResponse):  # pragma: no cover
             return self.send_response(proc_req)
 
-        # The only thing that should have changed
-        _env["entity_type"].persistence.store_pushed_authorization()
-
-        response = JsonResponse(proc_req["response_args"].to_dict())
+        logger.debug(f"Process result: {proc_req}")
+        if isinstance(proc_req["response_args"], Message):
+            response = JsonResponse(proc_req["response_args"].to_dict())
+        else:
+            response = JsonResponse(proc_req["response_args"])
         return self.send_response(response)
 
     def pushed_authorization_endpoint(self, context: ExtendedContext):

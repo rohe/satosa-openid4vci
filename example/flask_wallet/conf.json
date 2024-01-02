@@ -71,6 +71,9 @@
               "wallet_instance_attestation": {
                 "class": "openid4v.client.wallet_instance_attestation.WalletInstanceAttestation"
               }
+            },
+            "httpc_params": {
+              "verify": false
             }
           },
           "key_conf": {
@@ -90,6 +93,9 @@
         "class": "openid4v.client.pid_eaa_consumer.PidEaaHandler",
         "kwargs": {
           "config": {
+            "httpc_params": {
+              "verify": false
+            },
             "add_ons": {
               "pkce": {
                 "function": "idpyoidc.client.oauth2.add_on.pkce.add_support",
@@ -152,7 +158,9 @@
                 "path": "credential",
                 "class": "openid4v.client.pid_eaa.Credential",
                 "kwargs": {
-                  "client_auth_methods": ["bearer_header"]
+                  "client_authn_methods": {
+                    "dpop_client_auth": "idpyoidc.client.oauth2.add_on.dpop.DPoPClientAuth"
+                  }
                 }
               }
             }

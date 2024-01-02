@@ -13,12 +13,10 @@ logger = logging.getLogger(__name__)
 
 
 def oidc_provider_init_app(config, domain, name="idpy_oidc", **kwargs):
-    name = name or __name__
     app = type("IdpyOidcApp", (object,), {"entity_config": config})
     app.server = make_federation_combo(**config)
     for entity_type in app.server.keys():
         setattr(app, entity_type, app.server[entity_type])
-
     return app
 
 

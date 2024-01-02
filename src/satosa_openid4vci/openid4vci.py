@@ -36,7 +36,7 @@ IGNORED_HEADERS = ["cookie", "user-agent"]
 
 class OpenID4VCIFrontend(FrontendModule, Openid4VCIEndpoints):
     """
-    OpenID Connect frontend module based on idpy oidcop
+    OpenID Connect frontend module based on idpy-oidc
     """
 
     def __init__(self,
@@ -103,7 +103,10 @@ class OpenID4VCIFrontend(FrontendModule, Openid4VCIEndpoints):
         parse_req = _ec.par_db[orig_req["request_uri"]]
         #
         client_id = parse_req["client_id"]
-        sub = internal_resp.subject_id
+        # sub = internal_resp.subject_id
+        sub = internal_resp.attributes["mail"]
+        if isinstance(sub, list):
+            sub = sub[0]
 
         authn_event = create_authn_event(
             uid=sub,

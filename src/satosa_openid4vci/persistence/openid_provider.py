@@ -196,9 +196,9 @@ class OPPersistence(object):
             raise ValueError("Illegal token")
         return self.restore_client_info(part[0])
 
-    def get_claims_from_sid(self, sid):
+    def get_claims_from_branch_key(self, branch_key):
         sman = self.upstream_get("context").session_manager
-        _user_id, _client_id, _grant_id = sman.decrypt_session_id(sid)
+        _user_id, _client_id, _grant_id = sman.unpack_branch_key(branch_key)
         return self.storage.fetch(information_type="claims", key=_user_id)
 
     def get_registered_client_ids(self):
@@ -207,12 +207,16 @@ class OPPersistence(object):
     def load_all_claims(self, context=None):
         claims = {}
         _context = context or self.upstream_get("context")
+        _userinfo = getattr(_context, "userinfo", None)
+        if _userinfo is None:
+            return
+
         sman = _context.session_manager
 
         for k, v in sman.dump()["db"].items():
             if v[0] == "idpyoidc.server.session.grant.Grant":
-                sid = k
-                claims = self.storage.get_claims_from_sid(sid)
+                branch_key = k
+                claims = self.get_claims_from_branch_key(branch_key)
                 break
             else:  # pragma: no cover
                 continue
@@ -223,7 +227,7 @@ class OPPersistence(object):
             )
 
         # That's a patchy runtime definition of userinfo db configuration
-        _context.userinfo.load(claims)
+        _userinfo.load(claims)
 
     def store_pushed_authorization(self):
         _context = self.upstream_get("context")
