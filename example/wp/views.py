@@ -150,6 +150,11 @@ def token():
     return service_endpoint(_endpoint)
 
 
+@entity.route('/app_attestation', methods=['GET'])
+def app_attestation():
+    _endpoint = current_app.server["wallet_provider"].get_endpoint('app_attestation')
+    return service_endpoint(_endpoint)
+
 @entity.errorhandler(werkzeug.exceptions.BadRequest)
 def handle_bad_request(e):
     return 'bad request!', 400

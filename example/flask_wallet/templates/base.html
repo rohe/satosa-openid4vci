@@ -6,13 +6,53 @@
     <title>Dummy Wallet</title>
 </head>
 <body>
-<h1>A Identity Python based Dummy Wallet</h1>
+<h1>A Wallets initial steps</h1>
+<h3>The EUDI Wallet Technical Specifications used:</h3>
+<a href=https://github.com/italia/eudi-wallet-it-docs">The Italian profile</a>
+<h3>System layout</h3>
+A small OpenID Federation (the green cloud) containing 4 entities:
+<dl>
+    <dt>TA</dt>
+    <dd>A Trust Anchor - the trusted 3rd party</dd>
+    <dt>PID Issuer</dt>
+    <dd>Issuer of PID Credentials</dd>
+    <dt>Wallet Provider</dt>
+    <dd>Wallet Provider - the connection between the Federation and the Wallet</dd>
+    <dt>Trust Mark Issuer</dt>
+    <dd>Issuer of Trust Marks. In this case of trust marks that shows what kind of
+        credential Issuer an entity is.
+    </dd>
+</dl>
+<img src="../img/Wallet_demo.jpg"/>
+<p></p>
+The <b>Wallet</b> is not part of the OpenID Federation but has the capability to query the Federation for information.
+<h3>Software used</h3>
+<ol>
+    <li><a href="https://github.com/IdentityPython/idpy-oidc">IdpyOidc: A Python implementation of everything OpenID
+        Connect and
+        OAuth2.</a></li>
+    <li><a href="https://github.com/IdentityPython/SATOSA">SATOSA - A configurable proxy for translating between
+        different authentication protocols such as SAML2, OpenID Connect and OAuth2. </a></li>
+    <li><a href="https://github.com/rohe/fedservice">Fedservice - Implementation of OpenID Federation</a></li>
+    <li><a href="https://github.com/rohe/idpy-sdjwt">IdpySDJWT - Selective Disclosure for JWTs (SD-JWT)</a></li>
+    <li><a href="https://github.com/rohe/openid4v">OpenID4V - OpenID4VP and OpenID4VCI</a></li>
+    <li><a href="https://github.com/rohe/satosa-openid4vci">satosa-openid4vci - Credential Issuer as front-end to
+        SATOSA</a></li>
+</ol>
+<hr>
 <form action="wallet_provider" method="get">
-  <h2>Start collecting the Wallet Instance Attestation from the Wallet Provider</h2>
-  <h3>Please enter the Entity identifier of the Wallet Provider:</h3>
-  <input type="text" id="entity_id" name="entity_id" class="form-control" placeholder="EID"
-         autofocus>
-  <button type="submit">Start</button>
+    <h2>STEP1: Initiate the Wallet by collecting the Wallet Instance Attestation from the Wallet Provider</h2>
+    This is split into 3 parts:
+    <ol>
+        <li>Collecting a trust chain and calculate the metadata for the Wallet provider</li>
+        <li>Get a <i>nonce</i> from the App Attestation Service</li>
+        <li>Construct the Wallet Instance Attestion Request and send it to the Wallet Provider</li>
+    </ol>
+    <b>Note:</b> The Wallet has somehow gotten the necessary information about the Trust Anchor.
+    <h3>Please enter the Entity identifier of the Wallet Provider:</h3>
+    <input type="text" id="entity_id" name="entity_id" class="form-control" placeholder="EID"
+           autofocus>
+    <button type="submit">Start</button>
 </form>
 </body>
 </html>

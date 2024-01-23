@@ -125,6 +125,36 @@
                   "lifetime": 3600,
                   "sign_alg": "ES256"
                 }
+              },
+              "app_attestation": {
+                "path": "app_attestation",
+                "class": "openid4v.wallet_provider.app_attestation.AppAttestation",
+                "kwargs": {
+                  "app_attestation_service": {
+                    "class": "openid4v.wallet_provider.app_attestation.AppAttestationService",
+                    "kwargs": {
+                      "client_authn_method": ["none"],
+                      "crypt_config": {
+                        "key_defs": [
+                          {
+                            "type": "OCT",
+                            "use": [
+                              "enc"
+                            ],
+                            "kid": "password"
+                          },
+                          {
+                            "type": "OCT",
+                            "use": [
+                              "enc"
+                            ],
+                            "kid": "salt"
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
               }
             },
             "wallet_provider_id": "https://127.0.0.1:4000"

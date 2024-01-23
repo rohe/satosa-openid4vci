@@ -43,7 +43,7 @@ config:
       authority_hints:
         - "https://127.0.0.1:7001"
       trust_marks:
-        - eyJhbGciOiJSUzI1NiIsImtpZCI6IldXdFpSV2N0TVRCWGNIRk1OVEZHYkRCeU5ubE1WSEp1Y2t4UmNraHZVV3RKZW5kaU1qUmtZV1ZhY3cifQ.eyJpYXQiOiAxNzAyNTUwNzUwLCAiaWQiOiAiaHR0cDovL2RjNGV1LmV4YW1wbGUuY29tL1BlcnNvbklkZW50aWZpY2F0aW9uRGF0YS9zZSIsICJzdWIiOiAiaHR0cHM6Ly8xMjcuMC4wLjE6ODA4MCIsICJleHAiOiAxNzA1MTQyNzUwLCAiaXNzIjogImh0dHBzOi8vMTI3LjAuMC4xOjUwMDQifQ.A2bp5dRFhMz76oivV8pKX0Q9Z_pfH_hSY_5FGNfc_UXTv9vrFK-N9Zu7zewZJWFh2SecBgJ7cG4oxbYXI1-QdyXLkBsL0FyMgZliDiooEqVngG1k7I2EN5fFBLYlQGVuybsi8ihQlZ196Ph7XSoo7Mxk8w7eKtrNnE_823iAo_hee_C5NHTnFsmHniPDLOIefaUoyBMPqhDQHII2m2Spgk9lKhdH_WjCslXO4lXW7irPC7YbDxMCesp4zgYnW-XqBX0msHcNeP0rvrI1FaWAP8gWYIut1I1E_84NXBJu9tuQqBDXsIegktWI70P_VLZh8mSEaAloB5lkXiNFn9nhqA
+        - eyJhbGciOiJSUzI1NiIsImtpZCI6IldXdFpSV2N0TVRCWGNIRk1OVEZHYkRCeU5ubE1WSEp1Y2t4UmNraHZVV3RKZW5kaU1qUmtZV1ZhY3cifQ.eyJpYXQiOiAxNzA1ODU4Mzg3LCAiaWQiOiAiaHR0cDovL2RjNGV1LmV4YW1wbGUuY29tL1BlcnNvbklkZW50aWZpY2F0aW9uRGF0YS9zZSIsICJzdWIiOiAiaHR0cHM6Ly8xMjcuMC4wLjE6ODA4MCIsICJleHAiOiAxNzA4NDUwMzg3LCAiaXNzIjogImh0dHBzOi8vMTI3LjAuMC4xOjUwMDQifQ.DwWY663mjq41TpD73XgyYaD2bHCeVJdgdNgZgVfq3zBV6vj9JefJvooJvgDNTTCiBo7DW-BajMVi-Io1Nlu5tfhQHBKOFZVWes1w9FyryAbgO-2t8gYcAlD8eYeTM-_vs3eGo4wZNmGT-GijSlfgRrcHurjhWu3mFw8bCHyFiiz5jwXmEub8VvzgtveiAHVN7h2W5tyDPA2zx1Ydt6dG7N8ooNA7xQDg4DSNe0F8th6N-TVfmxmP6Ynn8AI1wAjMnrffB7Aclp9bjDu7YM-rYxGSTF41c1JXZ7vKEFC8R_PM_tC5RHzI6ef_37NBWRhOyKP7nCd-Om1xBd1wPoc5Gw
       endpoints:
         entity_configuration:
           path: ".well-known/openid-federation"
@@ -179,7 +179,7 @@ config:
                         - enc
                       kid: code
                 code:
-                  lifetime: 600
+                  lifetime: 900
                   kwargs:
                     crypt_conf:
                       kwargs:
@@ -265,7 +265,7 @@ config:
                   class: idpyoidc.server.oauth2.pushed_authorization.PushedAuthorization
                   kwargs:
                     client_authn_method:
-                      - client_assertion
+                      - client_authentication_attestation
               template_dir: template
               session_params:
                 encrypter:

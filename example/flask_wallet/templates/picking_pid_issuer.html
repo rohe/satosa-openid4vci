@@ -5,32 +5,54 @@
     <title>Picking PID Issuer</title>
 </head>
 <body>
-<h1>3. Find PID Issuer</h1>
-<h3>Credential Issuers in the federation</h3>
-<ul>
-    {% for key in credential_issuers %}
-    <li>{{ key }}</li>
-    {% endfor %}
-</ul>
-<h3>PID Issuers in the federation</h3>
-    <ul>
-    {% for key in pid_issuers %}
-    <li>{{ key }}</li>
-    {% endfor %}
-    </ul>
+<h1>2. Picking a PID Issuer</h1>
+The Wallet traverses the Federation to find the right PID Issuer
 
-<h3>Verified Trust Marks per Issuer</h3>
 <dl>
-    {% for key, value in trust_marks.items() %}
-    <dt>{{ key }}</dt>
-    <dd>{{ value }}</dd>
-    {% endfor %}
+    <dt>The total set of Credential Issuers in the federation</dt>
+    <dd>
+        <ul>
+            {% for key in credential_issuers %}
+            <li>{{ key }}</li>
+            {% endfor %}
+        </ul>
+    </dd>
 </dl>
-<h3>Chosen PID Isssuer</h3>
+<p></p>
+<dl>
+    <dt>Of all the Credential Issuer these are the PID Issuers in the federation</dt>
+    <dd>
+        <ul>
+            {% for key in pid_issuers %}
+            <li>{{ key }}</li>
+            {% endfor %}
+        </ul>
+    </dd>
+</dl>
+<p></p>
+<dl>
+    <dt>Verified Trust Marks per Issuer</dt>
+    <dd>
+        <dl>
+            {% for key, value in trust_marks.items() %}
+            <dt>{{ key }}</dt>
+            <dd>{{ value }}</dd>
+            {% endfor %}
+        </dl>
+    </dd>
+</dl>
+
+Based on the process above this was the chosen PID Isssuer:
 {{ pid_issuer_to_use }}
 <hr>
+Next step is to get the Credential. This consists of multiple steps:
+<ol>
+    <li>Authorization</li>
+    <li>Access Token</li>
+    <li>Credential</li>
+</ol>
 <input type="button" onclick="location.href='authz'"
-       value="4. Authorization Request"/>
+       value="3:1 Authorization Request"/>
 
 </body>
 </html>

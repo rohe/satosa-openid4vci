@@ -7,8 +7,6 @@ from idpyoidc.client.oauth2 import Client
 
 from openid4v.client.client_authn import ClientAssertion
 from openid4v.client.client_authn import DPoPHeader
-from openid4v.client.pid_eaa_consumer import PidEaaHandler
-from openid4v.client.wallet_instance_attestation import WalletInstanceAttestation
 
 
 def main(entity_id: str,
@@ -27,7 +25,7 @@ def main(entity_id: str,
                         # "key_conf": {"key_defs": DEFAULT_KEY_DEFS},
                         "services": {
                             "wallet_instance_attestation": {
-                                "class": WalletInstanceAttestation,
+                                "class": "openid4v.client.wallet_instance_attestation.WalletInstanceAttestation",
                                 "kwargs": {}
                             }
                         },
@@ -36,7 +34,7 @@ def main(entity_id: str,
                 }
             },
             "pid_eaa_consumer": {
-                'class': PidEaaHandler,
+                'class': "openid4v.client.pid_eaa_consumer.PidEaaHandler",
                 'kwargs': {
                     'config': {
                         "base_url": "",

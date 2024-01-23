@@ -73,7 +73,7 @@
               "client_secret_post": "idpyoidc.server.client_authn.ClientSecretPost",
               "client_assertion": "openid4v.openid_credential_issuer.client_authn.ClientAssertion",
               "dpop_client_auth": "idpyoidc.server.oauth2.add_on.dpop.DPoPClientAuth",
-              "wallet_instance_attestation": "openid4v.openid_credential_issuer.client_authn.WalletInstanceAttestation"
+              "client_authentication_attestation": "openid4v.openid_credential_issuer.client_authn.ClientAuthenticationAttestation"
             },
             "vct": "https://credentials.example.com/identity_credential",
             "keys": {
@@ -164,7 +164,7 @@
                 "path": "token",
                 "class": "openid4v.openid_credential_issuer.access_token.Token",
                 "kwargs": {
-                  "client_authn_method": ["wallet_instance_attestation"]
+                  "client_authn_method": ["client_authentication_attestation"]
                 }
               },
               "authorization": {

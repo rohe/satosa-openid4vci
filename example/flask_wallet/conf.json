@@ -70,6 +70,9 @@
             "services": {
               "wallet_instance_attestation": {
                 "class": "openid4v.client.wallet_instance_attestation.WalletInstanceAttestation"
+              },
+              "app_attestation": {
+                "class": "openid4v.client.app_attestation_service.AppAttestationService"
               }
             },
             "httpc_params": {
@@ -119,8 +122,8 @@
                   "signing_algorithm": "RS256",
                   "merge_rule": "lax",
                   "authn_method": {
-                    "client_assertion": {
-                      "class": "openid4v.client.client_authn.ClientAssertion"
+                    "client_authentication_attestation": {
+                      "class": "openid4v.client.client_authn.ClientAuthenticationAttestation"
                     }
                   }
                 }
@@ -140,17 +143,13 @@
             "services": {
               "pid_eaa_authorization": {
                 "class": "openid4v.client.pid_eaa.Authorization",
-                "kwargs": {
-                  "client_authn_methods": {
-                    "client_assertion": "openid4v.client.client_authn.ClientAssertion"
-                  }
-                }
+                "kwargs": {}
               },
               "pid_eaa_token": {
                 "class": "openid4v.client.pid_eaa.AccessToken",
                 "kwargs": {
                   "client_authn_methods": {
-                    "client_assertion": "openid4v.client.client_authn.ClientAuthenticationAttestation"
+                    "client_authentication_attestation": "openid4v.client.client_authn.ClientAuthenticationAttestation"
                   }
                 }
               },

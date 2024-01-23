@@ -5,8 +5,8 @@
     <title>Wallet Instance Attestation</title>
 </head>
 <body>
-<h1>2. Wallet Instance Attestation</h1>
-<h3>The Attestation Request: </h3>
+<h1>1:3. Wallet Instance Attestation</h1>
+<h3  style="color: blue">The Attestation Request: </h3>
 <dl>
     {% for key, value in req_info.items() %}
     <dt>{{ key }}</dt>
@@ -14,7 +14,7 @@
     {% endfor %}
 </dl>
 <br>
-<h3>The Request Assertion: </h3>
+<h3>The Assertion in the request (unpacked): </h3>
 <dl>
     {% for key, value in req_assertion.items() %}
     <dt>{{ key }}</dt>
@@ -31,7 +31,7 @@
 
 <hr>
 
-<h3>The Attestation Response (unpacked)</h3>
+<h3 style="color: green">The Attestation Response (unpacked)</h3>
 <dl>
     {% for key, value in wallet_instance_attestation.items() %}
     <dt>{{ key }}</dt>
@@ -48,7 +48,7 @@
 
 <hr>
 <input type="button" onclick="location.href='picking_pid_issuer'"
-       value="3. Find PID Issuer"/>
+       value="2. Find PID Issuer"/>
 
 </body>
 </html>
