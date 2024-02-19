@@ -21,3 +21,4 @@
 {"iat": 1705827417, "id": "http://dc4eu.example.com/PersonIdentificationData/se", "sub": "https://127.0.0.1:8080", "exp": 1708419417}
 {"iat": 1705857572, "id": "http://dc4eu.example.com/PersonIdentificationData/se", "sub": "https://127.0.0.1:8080", "exp": 1708449572}
 {"iat": 1705858387, "id": "http://dc4eu.example.com/PersonIdentificationData/se", "sub": "https://127.0.0.1:8080", "exp": 1708450387}
+{"iat": 1707292094, "id": "http://dc4eu.example.com/PersonIdentificationData/se", "sub": "https://127.0.0.1:8080", "exp": 1709884094}

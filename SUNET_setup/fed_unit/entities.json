@@ -19,19 +19,6 @@
       "dc4eu"
     ]
   },
-  "pid": {
-    "dir": "cred",
-    "config": "conf_pid.json",
-    "authority_hints": [
-      "dc4eu"
-    ],
-    "trust_anchors": [
-      "dc4eu"
-    ],
-    "trust_marks": {
-      "tmi": ["http://dc4eu.example.com/PersonIdentificationData/se"]
-    }
-  },
   "dc4eu": {
     "dir": "ta",
     "config": "conf.json",

@@ -1,21 +1,36 @@
-# Steps to add the SATOSA frontend to the federation
+##################################################
+Steps to add the SATOSA frontend to the federation
+##################################################
 
 Some information must be copied from the federation setup to the SATOSA setup.
 
 For this to work you must start by running
 
-    cd federation_entities
-    ./setup.py
+    cd fed_unit
+    tools/setup_fed.py
 
-Note that the PID Issuer is represented by a *dummy* entity in
-entities.json. 
+===========================================
+From federation_entities to openid4vci_oidc
+===========================================
 
-## From federation_entities to openid4vci_oidc
+Trust marks
+-----------
 
-For the following to work it is assumed that you are in the **federation_entities**
+Remaining in the **fed_unit** directory you have to create a trust mark for the
+credential issuer. The script to use for this is *fed_unit/create_trust_mark.py*
+In it's general form the command is::
+
+    create_trust_mark.py <trust_mark_issuer_ref> <subject_entity_id> <trust_mark_id>
+
+As and example this in the basic setup would be::
+
+    create_trust_mark.py tmi https://127.0.0.1:8080 http://dc4eu.example.com/PersonIdentificationData/se
+
+For the following to work it is assumed that you are in the **openid4vci_oidc**
 directory.
 
-### keys
+Trust marks
+
 
 #### PID Issuer
 

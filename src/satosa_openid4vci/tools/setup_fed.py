@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 import json
 
-from idpyoidc.util import load_config_file
-
 from fedservice.combo import FederationCombo
 from fedservice.utils import make_federation_combo
-from utils import load_values_from_file
+from idpyoidc.util import load_config_file
+from satosa_openid4vci.setup_utils import load_values_from_file
 
 ENTITY = json.loads(open("entities.json", 'r').read())
 
@@ -75,10 +74,9 @@ for ent, info in ENTITY.items():
         with open(file_name, "w") as fp:
             fp.write(json.dumps(trust_marks))
 
-
 trust_anchors = {}
 for ent, info in trust_anchor.items():
-    for k,v in info.items():
+    for k, v in info.items():
         trust_anchors[k] = v
 
 print(f"Trust Anchors: {trust_anchors}")

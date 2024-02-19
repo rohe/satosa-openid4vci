@@ -1,0 +1,285 @@
+module: satosa_openid4vci.openid4vci.OpenID4VCIFrontend
+name: OIDC
+
+config:
+  domain: &domain localhost
+  server_name: *domain
+  base_url: &base_url <base_url>
+
+  storage:
+    class: "satosa_oidcop.core.storage.file.FilesystemDB"
+    kwargs:
+      fdir: "storage"
+      key_conv: "idpyoidc.util.Base64"
+      value_conv: "idpyoidc.util.JSON"
+
+  default_target_backend: oidc
+  salt_size: 8
+
+  op:
+    server_info:
+      entity_id: *base_url
+      persistence:
+        class: satosa_openid4vci.persistence.federation_entity.FEPersistence
+        kwargs:
+          storage:
+            class: "satosa_openid4vci.core.storage.file.FilesystemDB"
+            kwargs:
+              fdir: "fe_storage"
+              key_conv: "idpyoidc.util.Base64"
+              value_conv: "idpyoidc.util.JSON"
+      key_config:
+        key_defs:
+          - type: "RSA"
+            use: [ "sig" ]
+          - type: "EC"
+            crv: "P-256"
+            use: [ "sig" ]
+        private_path: "private/pid_fed_keys.json"
+        read_only: false
+      preference:
+        organization_name: The OP operator
+        contacts: operations@op.example.com
+      authority_hints:
+        - "https://127.0.0.1:7001"
+      trust_marks:
+        - eyJhbGciOiJSUzI1NiIsImtpZCI6IldXdFpSV2N0TVRCWGNIRk1OVEZHYkRCeU5ubE1WSEp1Y2t4UmNraHZVV3RKZW5kaU1qUmtZV1ZhY3cifQ.eyJpYXQiOiAxNzA1ODU4Mzg3LCAiaWQiOiAiaHR0cDovL2RjNGV1LmV4YW1wbGUuY29tL1BlcnNvbklkZW50aWZpY2F0aW9uRGF0YS9zZSIsICJzdWIiOiAiaHR0cHM6Ly8xMjcuMC4wLjE6ODA4MCIsICJleHAiOiAxNzA4NDUwMzg3LCAiaXNzIjogImh0dHBzOi8vMTI3LjAuMC4xOjUwMDQifQ.DwWY663mjq41TpD73XgyYaD2bHCeVJdgdNgZgVfq3zBV6vj9JefJvooJvgDNTTCiBo7DW-BajMVi-Io1Nlu5tfhQHBKOFZVWes1w9FyryAbgO-2t8gYcAlD8eYeTM-_vs3eGo4wZNmGT-GijSlfgRrcHurjhWu3mFw8bCHyFiiz5jwXmEub8VvzgtveiAHVN7h2W5tyDPA2zx1Ydt6dG7N8ooNA7xQDg4DSNe0F8th6N-TVfmxmP6Ynn8AI1wAjMnrffB7Aclp9bjDu7YM-rYxGSTF41c1JXZ7vKEFC8R_PM_tC5RHzI6ef_37NBWRhOyKP7nCd-Om1xBd1wPoc5Gw
+      endpoints:
+        entity_configuration:
+          path: ".well-known/openid-federation"
+          class: 'fedservice.entity.server.entity_configuration.EntityConfiguration'
+      trust_anchors:
+        https://127.0.0.1:7001:
+          keys:
+            - e: AQAB
+              kid: cGdpbkhwVUhaaUFFTW16ckp0alZoaDdGU2pIZWtUU2pCYmpDMW5iWjlvSQ
+              kty: RSA
+              n: uXRgNfCqC8ypOortnwrfaUZs69KpCVaPrXMb9cSY4E-rMaIh6W1vcXzDZ12BVuiXlksHZ6PcgTBns3s-IS6t1cfIiVrCaEqG3VcFD_FlIooP6PaoF3LJ4KECMhCm23nLUXGOaTx_8CI5pfYcI0talJBYDwTsRF2VaftrH3FzHZWRx_9keU2ZqDyvHmqPpeiG60b8Ncyj_MfaOA40ewQoLX_XOVkv3YrN44JdgSvnTBzka15UAjVoIxuS1ejkhbmZaoEQrzqd9VMXlwvWOmicX6kZRADlZN7kuNOm9mS0cRUUbYPJl0tKQa9_oOCuwnuR5wDHnN-V1_hwx3VgOCMwLQ
+              use: sig
+            - crv: P-256
+              kid: YzBfYkxrb3lETUlPTnJPdTIyWjRaalJXQVJBVVpTd1U4Q19Ramt3SzdZZw
+              kty: EC
+              use: sig
+              x: wIDbe83-85kKLDTRNjgfwliwEnC8cgpIccCIGW0wnBY
+              y: fkbyzyfjd8vqnXjGDahN5ulBz6SloDuRFZibcJl6q9c
+      httpc_params:
+        verify: false
+      entity_type:
+        openid_credential_issuer:
+          class: openid4v.openid_credential_issuer.OpenidCredentialIssuer
+          kwargs:
+            config:
+              issuer: *base_url
+              persistence:
+                class: satosa_openid4vci.persistence.openid_provider.OPPersistence
+                kwargs:
+                  storage:
+                    class: "satosa_openid4vci.core.storage.file.FilesystemDB"
+                    kwargs:
+                      fdir: "op_storage"
+                      key_conv: "idpyoidc.util.Base64"
+                      value_conv: "idpyoidc.util.JSON"
+              httpc_params:
+                verify: false
+                timeout: 1
+              userinfo:
+                  class: openid4v.user_info.UserInfo
+                  kwargs:
+                    db_file: users.json
+              preference:
+                claims_supported:
+                  - preferred_username
+                scopes_supported:
+                  - profile
+                  - email
+                subject_types_supported:
+                  - public
+                  - pairwise
+                  - ephemeral
+                grant_types_supported:
+                  - authorization_code
+                  - implicit
+                  - urn:ietf:params:oauth:grant-type:jwt-bearer
+                  - refresh_token
+                attribute_disclosure:
+                  '':
+                    - given_name
+                    - family_name
+                    - birthdate
+                    - place_of_birth
+                    - unique_id
+                    - tax_id_code
+                credentials_supported:
+                  - credential_definition:
+                      credentialSubject:
+                        birthdate:
+                          display:
+                            - locale: en-US
+                              name: Date of Birth
+                            - locale: it-IT
+                              name: Data di Nascita
+                          mandatory: true
+                        family_name:
+                          display:
+                            - locale: en-US
+                              name: Current Family Name
+                            - locale: it-IT
+                              name: Cognome
+                          mandatory: true
+                        given_name:
+                          display:
+                            - locale: en-US
+                              name: Current First Name
+                            - locale: it-IT
+                              name: Nome
+                          mandatory: true
+                        place_of_birth:
+                          display:
+                            - locale: en-US
+                              name: Place of Birth
+                            - locale: it-IT
+                              name: Luogo di Nascita
+                          mandatory: true
+                        tax_id_code:
+                          display:
+                            - locale: en-US
+                              name: Tax Id Number
+                            - locale: it-IT
+                              name: Codice Fiscale
+                          mandatory: true
+                        unique_id:
+                          display:
+                            - locale: en-US
+                              name: Unique Identifier
+                            - locale: it-IT
+                              name: Identificativo univoco
+                          mandatory: true
+                      type:
+                        - PersonIdentificationData
+                    cryptographic_binding_methods_supported:
+                      - jwk
+                    cryptographic_suites_supported:
+                      - RS256
+                      - RS512
+                      - ES256
+                      - ES512
+                    display:
+                      - locale: en-US
+                        name: Swedish PID Provider Example
+                    format: vc+sd-jwt
+                    id: eudiw.pid.se
+              token_handler_args:
+                jwks_def:
+                  private_path: private/pid_token_handler_keys.json
+                  read_only: false
+                  key_defs:
+                    - type: oct
+                      bytes: '24'
+                      use:
+                        - enc
+                      kid: code
+                code:
+                  lifetime: 900
+                  kwargs:
+                    crypt_conf:
+                      kwargs:
+                        iterations: 1
+                        keys:
+                          key_defs:
+                            - kid: 'password'
+                              type: 'OCT'
+                              use:
+                                - 'enc'
+                            - kid: 'salt'
+                              type: 'OCT'
+                              use:
+                                - 'enc'
+                          private_path: private/pid_crypt_keys.json
+                token:
+                  class: idpyoidc.server.token.jwt_token.JWTToken
+                  kwargs:
+                    lifetime: 3600
+                    add_claims_by_scope: true
+                id_token:
+                  class: idpyoidc.server.token.id_token.IDToken
+                  kwargs:
+                    base_claims:
+                      email:
+                        essential: true
+                      email_verified:
+                        essential: true
+              keys:
+                key_defs:
+                  - type: "RSA"
+                    use: [ "sig" ]
+                  - type: "EC"
+                    crv: "P-256"
+                    use: [ "sig" ]
+                uri_path: jwks.json
+                private_path: private/pid_oci_keys.json
+                read_only: false
+              client_authn_methods:
+                client_secret_basic: idpyoidc.server.client_authn.ClientSecretBasic
+                client_secret_post: idpyoidc.server.client_authn.ClientSecretPost
+                client_assertion: openid4v.openid_credential_issuer.client_authn.ClientAssertion
+                dpop_client_auth: idpyoidc.server.oauth2.add_on.dpop.DPoPClientAuth
+                client_secret_jwt: idpyoidc.server.client_authn.ClientSecretJWT
+                private_key_jwt: idpyoidc.server.client_authn.PrivateKeyJWT
+                client_authentication_attestation: openid4v.openid_credential_issuer.client_authn.ClientAuthenticationAttestation
+              authentication:
+                anon:
+                  acr: urn:oasis:names:tc:SAML:2.0:ac:classes:InternetProtocolPassword
+                  class: idpyoidc.server.user_authn.user.NoAuthn
+                  kwargs:
+                    user: diana
+              endpoint:
+                authorization:
+                  path: authorization
+                  class: openid4v.openid_credential_issuer.authorization.Authorization
+                  kwargs:
+                    response_modes_supported:
+                      - query
+                      - fragment
+                      - form_post
+                    claim_types_supported:
+                      - normal
+                      - aggregated
+                      - distributed
+                    claims_parameter_supported: true
+                    request_parameter_supported: true
+                    request_uri_parameter_supported: true
+                token:
+                  path: token
+                  class: openid4v.openid_credential_issuer.access_token.Token
+                  kwargs:
+                    client_authn_method:
+                      - client_authentication_attestation
+                credential:
+                  path: credential
+                  class: openid4v.openid_credential_issuer.credential.Credential
+                  kwargs:
+                    client_authn_method:
+                      - dpop_client_auth
+                pushed_authorization:
+                  path: pushed_authorization
+                  class: idpyoidc.server.oauth2.pushed_authorization.PushedAuthorization
+                  kwargs:
+                    client_authn_method:
+                      - client_authentication_attestation
+              template_dir: template
+              session_params:
+                encrypter:
+                  kwargs:
+                    iterations: 1
+                    keys:
+                      key_defs:
+                        - kid: 'password'
+                          type: 'OCT'
+                          use:
+                            - 'enc'
+                        - kid: 'salt'
+                          type: 'OCT'
+                          use:
+                            - 'enc'
+                      private_path: private/pid_session_keys.json
+                      read_only: false
