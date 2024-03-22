@@ -1,6 +1,6 @@
-################################################
-Steps to add the SATOSA frontend to a federation
-################################################
+##################################################
+Steps to add the Credential Issuer to a federation
+##################################################
 
 Start with copying plugins/orig.openid4vci_frontend.yaml to plugins/openid4vci_frontend.yaml
 
@@ -67,28 +67,30 @@ More specifically you have to add the information to setup_federation/trust_anch
 You should do this by creating a file with something like this inside::
 
     {
-      "entity_types": [
-        "federation_entity",
-        "trust_mark_entity"
-      ],
-      "jwks": {
-        "keys": [
-          {
-            "kty": "RSA",
-            "use": "sig",
-            "kid": "WGZ4OWJWczA0VFFqM29IclY2YzdadDJlcjRpNDFkSkpYblFCWERIVGtsbw",
-            "e": "AQAB",
-            "n": "ruq63lXrr35nq_J7ZQHBVjmOU97c_79SQMkPi2rJLE0RTszQkzG_UMSWYJrmPynwa9SgDKlizm8hCUJEZRPejbkqRfXS2DOcnXneC-CYZ0smucwSW8Ouab-7Smj6I4zFCFWHhfXINRldGrhtgJ23P6vMQWJ12L33oz_c5nNhfRBklLnqteRvuQ0hZMIo_4LHiWfRj8QLDT8p6MKXVZD2XCkGTgpsGABlKlgorLdcc7Y9X0b0GkOYY7eiE7OhJLqNYa-upbfDx3po9LpTnZVi0efueEyqOD5-fKUKflNJ0I-hcbvpa7pio8e_GBuYvOsHoYRfgZG27UK78AAAa1q2ew"
-          },
-          {
-            "kty": "EC",
-            "use": "sig",
-            "kid": "M0RpM280WTlUOGVkMnRRcmdjZmVZQ0VVMGxBZmtxbi1HSmc1LVdKZHB0VQ",
-            "crv": "P-256",
-            "x": "DozqqwXhYS3WWswrS8BS44RT-rbVtFE9fqow1UMg190",
-            "y": "JxxjWTtIugaIdcEItO5pFrseDYr59avD7Gdb3n3JN94"
-          }
-        ]
+      "https://127.0.0.1:8080": {
+        "entity_types": [
+          "federation_entity",
+          "openid_credential_issuer"
+        ],
+        "jwks": {
+          "keys": [
+            {
+              "kty": "RSA",
+              "use": "sig",
+              "kid": "WGZ4OWJWczA0VFFqM29IclY2YzdadDJlcjRpNDFkSkpYblFCWERIVGtsbw",
+              "e": "AQAB",
+              "n": "ruq63lXrr35nq_J7ZQHBVjmOU97c_79SQMkPi2rJLE0RTszQkzG_UMSWYJrmPynwa9SgDKlizm8hCUJEZRPejbkqRfXS2DOcnXneC-CYZ0smucwSW8Ouab-7Smj6I4zFCFWHhfXINRldGrhtgJ23P6vMQWJ12L33oz_c5nNhfRBklLnqteRvuQ0hZMIo_4LHiWfRj8QLDT8p6MKXVZD2XCkGTgpsGABlKlgorLdcc7Y9X0b0GkOYY7eiE7OhJLqNYa-upbfDx3po9LpTnZVi0efueEyqOD5-fKUKflNJ0I-hcbvpa7pio8e_GBuYvOsHoYRfgZG27UK78AAAa1q2ew"
+            },
+            {
+              "kty": "EC",
+              "use": "sig",
+              "kid": "M0RpM280WTlUOGVkMnRRcmdjZmVZQ0VVMGxBZmtxbi1HSmc1LVdKZHB0VQ",
+              "crv": "P-256",
+              "x": "DozqqwXhYS3WWswrS8BS44RT-rbVtFE9fqow1UMg190",
+              "y": "JxxjWTtIugaIdcEItO5pFrseDYr59avD7Gdb3n3JN94"
+            }
+          ]
+        }
       }
     }
 

@@ -68,7 +68,7 @@ for ent, info in ENTITY.items():
         for issuer_id, tm_ids in info["trust_marks"].items():
             for tm_id in tm_ids:
                 _fed_entity = get_federation_entity(fed_entity[issuer_id])
-                _tm_issuer = _fed_entity.get_endpoint("status").trust_mark_issuer
+                _tm_issuer = _fed_entity.server.trust_mark_entity
                 entity_id = get_federation_entity(fed_entity[ent]).entity_id
                 trust_marks.append(_tm_issuer.create_trust_mark(tm_id, entity_id))
         file_name = f"{info['dir']}/{ent}_trust_marks.json"

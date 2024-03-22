@@ -15,7 +15,6 @@ from flask import request
 from flask import session
 from flask.helpers import send_from_directory
 from idpyoidc.client.defaults import CC_METHOD
-from idpyoidc.client.oauth2.add_on.par import get_request_parameters
 from idpyoidc.util import rndstr
 from idpysdjwt.verifier import display_sdjwt
 from openid4v.message import WalletInstanceAttestationJWT
@@ -60,11 +59,11 @@ def send_image(path):
 def wallet_provider():
     wp_id = request.args["entity_id"]
     session["wallet_provider_id"] = wp_id
-    trust_chain = current_app.federation_entity.get_trust_chain(wp_id)
+    trust_chain = current_app.federation_entity.get_trust_chains(wp_id)
 
     return render_template('wallet_provider.html',
-                           trust_chain_path=trust_chain.iss_path,
-                           metadata=trust_chain.metadata)
+                           trust_chain_path=trust_chain[0].iss_path,
+                           metadata=trust_chain[0].metadata)
 
 
 @entity.route('/app_attestation')
@@ -75,13 +74,13 @@ def app_attestation():
     wallet_provider_id = session["wallet_provider_id"]
 
     # APP Attestation
-    trust_chain = current_app.federation_entity.get_trust_chain(wallet_provider_id)
+    trust_chains = current_app.federation_entity.get_trust_chains(wallet_provider_id)
 
     request_args = {}
     resp = wallet_entity.do_request(
         "app_attestation",
         request_args=request_args,
-        endpoint=trust_chain.metadata['wallet_provider']['app_attestation_endpoint'])
+        endpoint=trust_chains[0].metadata['wallet_provider']['app_attestation_endpoint'])
 
     session["nonce"] = resp["nonce"]
     return render_template('app_attestation.html',
@@ -96,7 +95,8 @@ def wallet_instance_attestation():
     wallet_entity = current_app.server["wallet"]
     wallet_provider_id = session["wallet_provider_id"]
 
-    trust_chain = current_app.federation_entity.get_trust_chain(wallet_provider_id)
+    trust_chains = current_app.federation_entity.get_trust_chains(wallet_provider_id)
+    trust_chain = trust_chains[0]
 
     # WIA request
     _service = wallet_entity.get_service("wallet_instance_attestation")
@@ -172,16 +172,19 @@ def picking_pid_issuer():
     tmi = {}
     se_pid_issuer_tm = 'http://dc4eu.example.com/PersonIdentificationData/se'
     for eid, metadata in _oci.items():
-        _trust_chain = current_app.federation_entity.get_trust_chain(eid)
-        _ec = _trust_chain.verified_chain[-1]
-        if "trust_marks" in _ec:
+        _trust_chain = current_app.federation_entity.get_trust_chains(eid)[0]
+        _entity_conf = _trust_chain.verified_chain[-1]
+        if "trust_marks" in _entity_conf:
             tmi[eid] = []
-            for _mark in _ec["trust_marks"]:
+            for _mark in _entity_conf["trust_marks"]:
                 _verified_trust_mark = current_app.federation_entity.verify_trust_mark(
                     _mark, check_with_issuer=True)
-                tmi[eid].append(_verified_trust_mark)
-                if _verified_trust_mark.get("id") == se_pid_issuer_tm:
-                    pid_issuer_to_use.append(eid)
+                if _verified_trust_mark:
+                    tmi[eid].append(_verified_trust_mark)
+                    if _verified_trust_mark.get("id") == se_pid_issuer_tm:
+                        pid_issuer_to_use.append(eid)
+                else:
+                    logger.warning("Could not verify trust mark")
 
     session["pid_issuer_to_use"] = pid_issuers[0]
 
@@ -232,12 +235,12 @@ def authz():
     _service = actor.get_service("authorization")
     _service.certificate_issuer_id = pid_issuer
 
-    par_req_info = get_request_parameters(
-        request_args, service=_service,
-        wallet_instance_attestation=wallet_entity.context.wallet_instance_attestation[_thumbprint]["attestation"],
-        state=kwargs["state"]
-    )
-    session["par_req"] = {k:v[0] for k,v in parse_qs(par_req_info["body"]).items()}
+    # par_req_info = get_request_parameters(
+    #     request_args, service=_service,
+    #     wallet_instance_attestation=wallet_entity.context.wallet_instance_attestation[_thumbprint]["attestation"],
+    #     state=kwargs["state"]
+    # )
+    # session["par_req"] = {k:v[0] for k,v in parse_qs(par_req_info["body"]).items()}
 
     req_info = _service.get_request_parameters(request_args, **kwargs)
 
@@ -268,7 +271,7 @@ def authz_cb(issuer):
     _consumer.finalize_auth(request.args)
     session["issuer"] = issuer
     return render_template('authorization.html',
-                           par_request=session["par_req"],
+                           #par_request=session["par_req"],
                            auth_req_uri=session["auth_req_uri"],
                            response=request.args.to_dict())
 

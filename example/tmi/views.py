@@ -138,9 +138,9 @@ def send_js(path):
     return send_from_directory('static', path)
 
 
-@entity.route('/status')
+@entity.route('/trust_mark_status')
 def fetch():
-    _endpoint = current_app.federation_entity.get_endpoint('status')
+    _endpoint = current_app.federation_entity.get_endpoint('trust_mark_status')
     return service_endpoint(_endpoint)
 
 

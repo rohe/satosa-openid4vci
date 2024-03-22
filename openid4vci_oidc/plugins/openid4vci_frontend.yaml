@@ -36,32 +36,35 @@ config:
             crv: "P-256"
             use: [ "sig" ]
         private_path: "private/pid_fed_keys.json"
+        public_path: "public/pid_fed_keys.json"
         read_only: false
       preference:
         organization_name: The OP operator
         contacts: operations@op.example.com
       authority_hints:
-        - "https://127.0.0.1:7001"
+        - "https://127.0.0.1:7003"
       trust_marks:
-        - eyJhbGciOiJSUzI1NiIsImtpZCI6IldXdFpSV2N0TVRCWGNIRk1OVEZHYkRCeU5ubE1WSEp1Y2t4UmNraHZVV3RKZW5kaU1qUmtZV1ZhY3cifQ.eyJpYXQiOiAxNzA1ODU4Mzg3LCAiaWQiOiAiaHR0cDovL2RjNGV1LmV4YW1wbGUuY29tL1BlcnNvbklkZW50aWZpY2F0aW9uRGF0YS9zZSIsICJzdWIiOiAiaHR0cHM6Ly8xMjcuMC4wLjE6ODA4MCIsICJleHAiOiAxNzA4NDUwMzg3LCAiaXNzIjogImh0dHBzOi8vMTI3LjAuMC4xOjUwMDQifQ.DwWY663mjq41TpD73XgyYaD2bHCeVJdgdNgZgVfq3zBV6vj9JefJvooJvgDNTTCiBo7DW-BajMVi-Io1Nlu5tfhQHBKOFZVWes1w9FyryAbgO-2t8gYcAlD8eYeTM-_vs3eGo4wZNmGT-GijSlfgRrcHurjhWu3mFw8bCHyFiiz5jwXmEub8VvzgtveiAHVN7h2W5tyDPA2zx1Ydt6dG7N8ooNA7xQDg4DSNe0F8th6N-TVfmxmP6Ynn8AI1wAjMnrffB7Aclp9bjDu7YM-rYxGSTF41c1JXZ7vKEFC8R_PM_tC5RHzI6ef_37NBWRhOyKP7nCd-Om1xBd1wPoc5Gw
+        - eyJhbGciOiJSUzI1NiIsImtpZCI6IlRGSXROekZhT0dzdFRsQldhR1ZtWmpjNVJrUm5XSFIxWlMxTVprUnljV05zU0dWbFJuUkZTa1JLV1EifQ.eyJpYXQiOiAxNzExMDExMjI0LCAiaWQiOiAiaHR0cDovL2RjNGV1LmV4YW1wbGUuY29tL1BlcnNvbklkZW50aWZpY2F0aW9uRGF0YS9zZSIsICJzdWIiOiAiaHR0cHM6Ly8xMjcuMC4wLjE6ODA4MCIsICJleHAiOiAxNzEzNjAzMjI0LCAiaXNzIjogImh0dHBzOi8vMTI3LjAuMC4xOjYwMDAifQ.N60XODDMgavl5BHe3acxjiwr5kY7EFE_UNVUQT4sf1e22-FesNhD4EXagQbO1EdZu1_mIn8mTJbNhWfmPABKuwtyGGImlu2s3riYlsyj9KuG5ntsVsPKXqMy_feltSVzC4nJyluYNFMZ28p9TiuU1CZOqTwSAnEguqI-Cj38IDl3-_1wpZ3Ag7Fg9dfevbSNND_nM4TZ9Dyg8hKQ-ZVHwfKWTo8l215Ou4VNruILkRfD102S2qj4paNabcoSTFby5EpWZTP7U56LIAdyS52g50lVJrlXCOLuLimk3oedpAfK62Xvhxr8d-ORzU5ObRucSzmazs42r9BuB-9wGOKnGg
       endpoints:
         entity_configuration:
           path: ".well-known/openid-federation"
           class: 'fedservice.entity.server.entity_configuration.EntityConfiguration'
       trust_anchors:
-        https://127.0.0.1:7001:
+        https://127.0.0.1:7003:
           keys:
-            - e: AQAB
-              kid: cGdpbkhwVUhaaUFFTW16ckp0alZoaDdGU2pIZWtUU2pCYmpDMW5iWjlvSQ
+            -
               kty: RSA
-              n: uXRgNfCqC8ypOortnwrfaUZs69KpCVaPrXMb9cSY4E-rMaIh6W1vcXzDZ12BVuiXlksHZ6PcgTBns3s-IS6t1cfIiVrCaEqG3VcFD_FlIooP6PaoF3LJ4KECMhCm23nLUXGOaTx_8CI5pfYcI0talJBYDwTsRF2VaftrH3FzHZWRx_9keU2ZqDyvHmqPpeiG60b8Ncyj_MfaOA40ewQoLX_XOVkv3YrN44JdgSvnTBzka15UAjVoIxuS1ejkhbmZaoEQrzqd9VMXlwvWOmicX6kZRADlZN7kuNOm9mS0cRUUbYPJl0tKQa9_oOCuwnuR5wDHnN-V1_hwx3VgOCMwLQ
               use: sig
-            - crv: P-256
-              kid: YzBfYkxrb3lETUlPTnJPdTIyWjRaalJXQVJBVVpTd1U4Q19Ramt3SzdZZw
+              kid: U0pnajZ4bWZ5VXVFLXFmTEtWQzJ1Nk1kUURUandWc2NocHkwUkNVc2lwZw
+              e: AQAB
+              n: tRZ5arhBBiLzpZ6uBRvYFkVXva1QGNlmBi_ZQKIUU7VSGjVWu07c2q2TMVXbgvGbdN1HpbdXmjZhxF89VmYLy6KN4lJj8XjVfXULtdQydjDFV5DBKjlUaSrKiayJaP8Z2GLsGexqost167ZWbqB8CLCw1yW9BsPYxH2fRd7X-T1_SBHwuDCfcmkOVDVYVlxTU4-ZDfHL3xryS5qs15mTjJ44YwWygdd5tP7wmg_bH3KwOzp3hcO7NGerbWJkI7X1NW3-33twmGaUlU-CHCmHDhQaKFle-mSu8w4yIlXaTaPsdXVeIDLqIifYei7-ZAVt8DZZEdL4T1qrqaIvw5kKVQ
+            -
               kty: EC
               use: sig
-              x: wIDbe83-85kKLDTRNjgfwliwEnC8cgpIccCIGW0wnBY
-              y: fkbyzyfjd8vqnXjGDahN5ulBz6SloDuRFZibcJl6q9c
+              kid: bVdUN2NHUnY1ejRBaEJyYlRMQk1Wd3J3MlZ6bVg3bVZBc0RWMDlTZTJ0NA
+              crv: P-256
+              x: H3tA-P1tw6ckeVyEc46VyYngk6yVmKc2omICbK758Nk
+              y: 9GE4ioGUK6wjnrVJnWAAZNE_YT0Sz915z7PA-VO457w
       httpc_params:
         verify: false
       entity_type:
@@ -83,9 +86,9 @@ config:
                 verify: false
                 timeout: 1
               userinfo:
-                  class: openid4v.user_info.UserInfo
-                  kwargs:
-                    db_file: users.json
+                class: openid4v.user_info.UserInfo
+                kwargs:
+                  db_file: users.json
               preference:
                 claims_supported:
                   - preferred_username
