@@ -100,3 +100,15 @@ Now copy this file over to the setup_federation site and run (assumed that ci.js
 
     ./add_info.py -s ci.json -t trust_anchor/subordinates
 
+Authentication server
+---------------------
+
+Since the credential issuer is a SATOSA frontend it expects there to be a
+backend to connect to. The example setup is using a OpenID Connect OP. Namely the
+Flask OP example in idpy-oidc. Has to be up and running when you start the SATOSA instance.
+This since the backend will do a dynamic client registration to the OP when
+it starts.
+
+If you want to use another authentication server you have to replace
+idpyoidc_backend.yaml in the **plugins** directory and change the backend reference in
+openid4vci_frontend.yaml.
