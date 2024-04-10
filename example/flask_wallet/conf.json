@@ -55,7 +55,7 @@
         }
       ]
     },
-    "trust_anchors": "file:trust_anchor.json",
+    "trust_anchors": "file:trust_anchor_sunet.json",
     "services": [
       "entity_configuration",
       "entity_statement",

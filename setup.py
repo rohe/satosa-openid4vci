@@ -20,7 +20,7 @@ with open(f'src/{_pkg_name}/__init__.py', 'r') as fd:
 setup(
     name=_pkg_name,
     version=version,
-    description="SATOSA Frontend based on openid4vci",
+    description="OpenID4VCI Credential Issuer implemented as a SATOSA Frontend",
     long_description=readme(),
     long_description_content_type="text/markdown",
     classifiers=[
@@ -40,6 +40,6 @@ setup(
     install_requires=[
         "satosa>=8.0.0",
         "openid4v",
-        "idpyoidc>=3.0.0",
+        "idpyoidc>=4.0.0",
     ],
 )

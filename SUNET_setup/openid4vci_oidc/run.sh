@@ -1,1 +1,0 @@
-gunicorn -b0.0.0.0:8080 satosa.wsgi:app --keyfile=private-key.pem --certfile=cert.pem
