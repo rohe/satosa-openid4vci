@@ -10,7 +10,7 @@
       "level": "DEBUG"
     },
     "loggers": {
-      "bobcat_idp": {
+      "entity": {
         "level": "DEBUG"
       }
     },
@@ -54,11 +54,23 @@
       "public_path": "static/tmi_fed_keys.json",
       "read_only": false
     },
-    "authority_hints": "file:tmi/tmi_authority_hints.json",
-    "trust_anchors": "file:tmi/tim_trust_anchors.json",
     "endpoints": [
       "entity_configuration"
     ],
+    "authority_hints": {
+      "class": "idpyoidc.storage.listfile.ReadOnlyListFile",
+      "kwargs": {
+        "file_name": "data/authority_hints"
+      }
+    },
+    "trust_anchors": {
+      "class": "idpyoidc.storage.abfile.AbstractFileSystem",
+      "kwargs": {
+        "fdir": "data/trust_anchors",
+        "key_conv": "idpyoidc.util.Base64",
+        "value_conv": "idpyoidc.util.JSON"
+      }
+    },
     "trust_mark_entity": {
       "class": "fedservice.trust_mark_entity.entity.TrustMarkEntity",
       "kwargs": {
