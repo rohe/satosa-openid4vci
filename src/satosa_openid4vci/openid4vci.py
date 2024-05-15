@@ -78,7 +78,7 @@ class OpenID4VCIFrontend(FrontendModule, Openid4VCIEndpoints):
 
     def _handle_backend_response(self, context: ExtendedContext, internal_resp):
         """
-        Called by handle_authn_response, once a backend made its work
+        Called by handle_authn_response, once a backend done its work
         :type context: satosa.context.Context
         :rtype: satosa.response.Response
 
@@ -104,9 +104,13 @@ class OpenID4VCIFrontend(FrontendModule, Openid4VCIEndpoints):
         #
         client_id = parse_req["client_id"]
         # sub = internal_resp.subject_id
-        sub = internal_resp.attributes["mail"]
-        if isinstance(sub, list):
+        logger.info(f"Response attributes = {internal_resp.attributes}")
+        # Which attribute/-s to use should be configurable
+        sub = internal_resp.attributes.get("mail")
+        if sub and isinstance(sub, list):
             sub = sub[0]
+        if not sub:
+            sub = internal_resp.subject_id
 
         authn_event = create_authn_event(
             uid=sub,
@@ -178,10 +182,8 @@ class OpenID4VCIFrontend(FrontendModule, Openid4VCIEndpoints):
             logger.debug(f"Redirect to: {redirect_url}")
             resp = SeeOther(redirect_url)
         else:  # pragma: no cover
-            # self._flush_endpoint_context_memory()
             raise NotImplementedError()
 
-        # I don't flush in-mem db because it will be flushed by handle_authn_response
         return resp
 
     def handle_authn_response(self, context: ExtendedContext, internal_resp):

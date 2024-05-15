@@ -10,8 +10,9 @@ from idpyoidc.message.oidc import AuthorizationRequest
 from idpyoidc.server import Server
 from idpyoidc.server.authn_event import create_authn_event
 from idpyoidc.server.util import execute
-from satosa_openid4vci.core import ExtendedContext
-from satosa_openid4vci.utils import IdpyOidcUtils
+from openid4v.openid_credential_issuer import OpenidCredentialIssuer
+from satosa_idpyop.core import ExtendedContext
+from satosa_idpyop.utils import IdpyOPUtils
 
 BASEDIR = os.path.abspath(os.path.dirname(__file__))
 
@@ -28,7 +29,7 @@ class App(object):
 
 
 STORE_CONF = {
-    "class": "satosa_openid4vci.core.storage.file.FilesystemDB",
+    "class": "satosa_idpyop.core.storage.file.FilesystemDB",
     "kwargs": {
         "fdir": "storage",
         "key_conv": "idpyoidc.util.Base64",
@@ -58,6 +59,19 @@ SERVER_CONF = {
     "refresh_token_expires_in": 86400,
     "keys": {"key_defs": DEFAULT_KEY_DEFS, "uri_path": "static/jwks.json"},
     "jwks_uri": "https://example.com/jwks.json",
+    "persistence": {
+        "class": "satosa_idpyop.persistence.openid_provider.OPPersistence",
+        "kwargs": {
+            "storage": {
+                "class": "satosa_idpyop.core.storage.file.FilesystemDB",
+                "kwargs": {
+                    "fdir": "op_storage",
+                    "key_conv": "idpyoidc.util.Base64",
+                    "value_conv": "idpyoidc.util.JSON"
+                }
+            }
+        }
+    },
     "token_handler_args": {
         "jwks_def": {
             "private_path": "private/token_jwks.json",
@@ -136,9 +150,9 @@ class TestPersistence(object):
 
         storage = execute(STORE_CONF)
         self.app = App(storage=storage)
-        self.utils = IdpyOidcUtils(self.app)
+        self.utils = IdpyOPUtils(self.app)
 
-        self.app.server = Server(SERVER_CONF)
+        self.app.server = OpenidCredentialIssuer(SERVER_CONF)
         self.session_manager = self.app.server.context.session_manager
         self.user_id = "diana"
 
@@ -201,18 +215,18 @@ class TestPersistence(object):
 
     def test_load_cdb(self):
         self._client_registration(CLIENT_INFO_1, jwks=KEYJAR_1.export_jwks())
-        self.utils.store_client_info(CLIENT_INFO_1["client_id"])
+        self.app.server.persistence.store_client_info(CLIENT_INFO_1["client_id"])
 
         context = ExtendedContext()
 
         # The simple case
-        client_info = self.utils.load_cdb(context, client_id=CLIENT_INFO_1["client_id"])
+        client_info = self.app.server.persistence.restore_client_info(client_id=CLIENT_INFO_1["client_id"])
         assert client_info == CLIENT_INFO_1
 
         credentials = f"{CLIENT_INFO_1['client_id']}:{CLIENT_INFO_1['client_secret']}"
         token = base64.b64encode(credentials.encode("utf-8")).decode("utf-8")
         context.request_authorization = f"Basic {token}"
-        client_info = self.utils.load_cdb(context)
+        client_info = self.app.server.persistence.restore_client_info(CLIENT_INFO_1["client_id"])
         assert client_info == CLIENT_INFO_1
 
         session_id = self._create_session(AUTH_REQ)
@@ -220,5 +234,5 @@ class TestPersistence(object):
         code = self._mint_code(grant, session_id)
         access_token = self._mint_access_token(grant, session_id, code)
         context.request_authorization = f"Bearer {access_token.value}"
-        client_info = self.utils.load_cdb(context)
+        client_info = self.app.server.persistence.restore_client_info(CLIENT_INFO_1["client_id"])
         assert client_info == CLIENT_INFO_1

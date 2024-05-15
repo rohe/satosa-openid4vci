@@ -23,7 +23,7 @@ from idpyoidc.server.user_info import UserInfo
 from idpyoidc.server.util import execute
 import pytest
 
-from satosa_openid4vci.core.persistence import Persistence
+from satosa_idpyop.core.persistence import Persistence
 
 CRYPT_CONFIG = {
     "kwargs": {
@@ -238,7 +238,7 @@ class Application(object):
 
 
 STORE_CONF = {
-    "class": "satosa_openid4vci.core.storage.file.FilesystemDB",
+    "class": "satosa_idpyop.core.storage.file.FilesystemDB",
     "kwargs": {
         "fdir": "storage",
         "key_conv": "idpyoidc.util.Base64",

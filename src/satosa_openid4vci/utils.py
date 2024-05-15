@@ -12,8 +12,8 @@ from idpyoidc.server.exception import InvalidClient
 from idpyoidc.server.exception import UnAuthorizedClient
 from idpyoidc.server.exception import UnknownClient
 from satosa.context import Context
-
-from .core import ExtendedContext
+from satosa_idpyop.core import ExtendedContext
+from satosa_idpyop.core.response import JsonResponse
 
 try:
     from satosa.context import add_prompt_to_context
@@ -22,8 +22,6 @@ except ImportError:
     def add_prompt_to_context(*args, **kwargs):
         pass
 import satosa.logging_util as lu
-
-from .core.response import JsonResponse
 
 logger = logging.getLogger(__name__)
 

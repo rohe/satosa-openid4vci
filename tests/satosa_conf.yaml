@@ -2,10 +2,10 @@ op:
   server_info:
     entity_id: 'https://ci.example.com'
     persistence:
-      class: satosa_openid4vci.persistence.federation_entity.FEPersistence
+      class: satosa_idpyop.persistence.federation_entity.FEPersistence
       kwargs:
         storage:
-          class: "satosa_openid4vci.core.storage.file.FilesystemDB"
+          class: "satosa_idpyop.core.storage.file.FilesystemDB"
           kwargs:
             fdir: "fe_storage"
             key_conv: "idpyoidc.util.Base64"
@@ -42,16 +42,16 @@ op:
             x: '2WQD73J1HcMQs8gZq43o2YvwgbKm1j_SHJgseUgniko'
             y: 'Pn_HidM6WjUJhAnAYKTdNaLVcM2ChgUgQgZXW4lY6bs'
     entity_type:
-      openid_provider:
-        class: fedservice.op.ServerEntity
+      openid_credential_issuer:
+        class: satosa_openid4vci.openid_credential_issuer.OpenidCredentialIssuer
         kwargs:
           config:
             issuer: https://example.com/
             persistence:
-              class: satosa_openid4vci.persistence.federation_entity.FEPersistence
+              class: satosa_idpyop.persistence.federation_entity.FEPersistence
               kwargs:
                 storage:
-                  class: "satosa_openid4vci.core.storage.file.FilesystemDB"
+                  class: "satosa_idpyop.core.storage.file.FilesystemDB"
                   kwargs:
                     fdir: "op_storage"
                     key_conv: "idpyoidc.util.Base64"
@@ -122,7 +122,7 @@ op:
             endpoint:
               authorization:
                 path: authorization
-                class: fedservice.op.authorization.Authorization
+                class: fedservice.appserver.oidc.authorization.Authorization
                 kwargs:
                   response_modes_supported:
                     - query

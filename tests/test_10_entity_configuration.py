@@ -1,16 +1,16 @@
 import os
 import sys
 
+import pytest
+import responses
 from cryptojwt.jws.jws import factory
 from idpyoidc.util import load_yaml_config
 from idpyoidc.util import rndstr
 from openid4v.client.client_authn import ClientAuthenticationAttestation
-import pytest
-import responses
 from satosa.state import State
-
-from satosa_openid4vci.core import ExtendedContext
+from satosa_idpyop.core import ExtendedContext
 from satosa_openid4vci.openid4vci import OpenID4VCIFrontend
+
 from tests import create_trust_chain_messages
 from tests import federation_setup
 from tests import wallet_setup
@@ -46,7 +46,7 @@ class TestFrontEnd():
 
     @pytest.fixture
     def frontend(self):
-        frontend_config = load_yaml_config("satosa_conf.yaml")
+        frontend_config = load_yaml_config(full_path("satosa_conf.yaml"))
 
         frontend = OpenID4VCIFrontend(auth_req_callback_func, INTERNAL_ATTRIBUTES,
                                       frontend_config, BASE_URL, "openid4vci_frontend")
@@ -68,14 +68,14 @@ class TestFrontEnd():
         _payload = _jws.jwt.payload()
         assert _payload
         assert _payload["authority_hints"] == ["https://ta.example.com"]
-        assert set(_payload["metadata"].keys()) == {"federation_entity", "openid_provider"}
+        assert set(_payload["metadata"].keys()) == {'federation_entity', 'openid_credential_issuer'}
 
     def test_authorization_endpoint(self):
         wallet_provider = self.entity["wallet_provider"]["wallet_provider"]
 
         # The WIA request by the Wallet
         srv = self.wallet["wallet"].get_service("wallet_instance_attestation")
-        req = srv.construct(request_args={"aud": wallet_provider.entity_id})
+        req = srv.construct(request_args={"aud": wallet_provider.entity_id, "nonce": "NONCE"})
         assert req["assertion"]
         # Now get the wallet provider to sign
 
@@ -258,4 +258,3 @@ class TestFrontEnd():
 
         _cred_response = endpoint.process_request(_parsed_req)
         assert _cred_response
-

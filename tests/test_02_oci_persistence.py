@@ -9,6 +9,7 @@ from idpyoidc.client.defaults import DEFAULT_KEY_DEFS
 from idpyoidc.message.oidc import AccessTokenRequest
 from idpyoidc.message.oidc import AuthorizationRequest
 from idpyoidc.server.authn_event import create_authn_event
+from satosa_idpyop.utils import combine_client_subject_id
 from satosa_openid4vci.openid_credential_issuer import OpenidCredentialIssuer
 
 BASEDIR = os.path.abspath(os.path.dirname(__file__))
@@ -31,73 +32,6 @@ CRYPT_CONFIG = {
 }
 
 SESSION_PARAMS = {"encrypter": CRYPT_CONFIG}
-
-SERVER_CONF = {
-    "issuer": "https://example.com/",
-    "httpc_params": {"verify": False, "timeout": 1},
-    "token_expires_in": 600,
-    "grant_expires_in": 300,
-    "refresh_token_expires_in": 86400,
-    "keys": {"key_defs": DEFAULT_KEY_DEFS, "uri_path": "static/jwks.json"},
-    "jwks_uri": "https://example.com/jwks.json",
-    "token_handler_args": {
-        "jwks_def": {
-            "private_path": "private/token_jwks.json",
-            "read_only": False,
-            "key_defs": [{"type": "oct", "bytes": "24", "use": ["enc"], "kid": "code"}],
-        },
-        "code": {"lifetime": 600, "kwargs": {"crypt_conf": CRYPT_CONFIG}},
-        "token": {
-            "class": "idpyoidc.server.token.jwt_token.JWTToken",
-            "kwargs": {
-                "lifetime": 3600,
-                "add_claims": True,
-                "add_claims_by_scope": True,
-                "aud": ["https://example.org/appl"],
-            },
-        },
-        "refresh": {
-            "class": "idpyoidc.server.token.jwt_token.JWTToken",
-            "kwargs": {
-                "lifetime": 3600,
-                "aud": ["https://example.org/appl"],
-            },
-        },
-        "id_token": {
-            "class": "idpyoidc.server.token.id_token.IDToken",
-            "kwargs": {
-                "base_claims": {
-                    "email": {"essential": True},
-                    "email_verified": {"essential": True},
-                }
-            },
-        },
-    },
-    "persistence": {
-        "class": "satosa_openid4vci.persistence.openid_provider.OPPersistence",
-        "kwargs": {
-            "storage": {
-                "class": "satosa_openid4vci.core.storage.file.FilesystemDB",
-                "kwargs": {
-                    "fdir": "op_storage",
-                    "key_conv": "idpyoidc.util.Base64",
-                    "value_conv": "idpyoidc.util.JSON"
-                }
-            }
-        }
-    },
-    "session_params": SESSION_PARAMS,
-    "template_dir": "template",
-    "claims_interface": {
-        "class": "idpyoidc.server.session.claims.ClaimsInterface",
-        "kwargs": {},
-    },
-    "userinfo": {
-        "class": "idpyoidc.server.user_info.UserInfo",
-        "kwargs": {"db_file": full_path("users.json")},
-    }
-}
-
 
 AUTH_REQ = AuthorizationRequest(
     client_id="client_1",
@@ -149,17 +83,86 @@ CLIENT_INFO_2 = {
 KEYJAR_2 = init_key_jar(key_defs=DEFAULT_KEY_DEFS)
 
 
+@pytest.fixture
+def server_conf():
+    return {
+        "issuer": "https://example.com/",
+        "httpc_params": {"verify": False, "timeout": 1},
+        "token_expires_in": 600,
+        "grant_expires_in": 300,
+        "refresh_token_expires_in": 86400,
+        "keys": {"key_defs": DEFAULT_KEY_DEFS, "uri_path": "static/jwks.json"},
+        "jwks_uri": "https://example.com/jwks.json",
+        "token_handler_args": {
+            "jwks_def": {
+                "private_path": "private/token_jwks.json",
+                "read_only": False,
+                "key_defs": [{"type": "oct", "bytes": "24", "use": ["enc"], "kid": "code"}],
+            },
+            "code": {"lifetime": 600, "kwargs": {"crypt_conf": CRYPT_CONFIG}},
+            "token": {
+                "class": "idpyoidc.server.token.jwt_token.JWTToken",
+                "kwargs": {
+                    "lifetime": 3600,
+                    "add_claims": True,
+                    "add_claims_by_scope": True,
+                    "aud": ["https://example.org/appl"],
+                },
+            },
+            "refresh": {
+                "class": "idpyoidc.server.token.jwt_token.JWTToken",
+                "kwargs": {
+                    "lifetime": 3600,
+                    "aud": ["https://example.org/appl"],
+                },
+            },
+            "id_token": {
+                "class": "idpyoidc.server.token.id_token.IDToken",
+                "kwargs": {
+                    "base_claims": {
+                        "email": {"essential": True},
+                        "email_verified": {"essential": True},
+                    }
+                },
+            },
+        },
+        "persistence": {
+            "class": "satosa_idpyop.persistence.openid_provider.OPPersistence",
+            "kwargs": {
+                "storage": {
+                    "class": "satosa_idpyop.core.storage.file.FilesystemDB",
+                    "kwargs": {
+                        "fdir": "op_storage",
+                        "key_conv": "idpyoidc.util.Base64",
+                        "value_conv": "idpyoidc.util.JSON"
+                    }
+                }
+            }
+        },
+        "session_params": SESSION_PARAMS,
+        "template_dir": "template",
+        "claims_interface": {
+            "class": "idpyoidc.server.session.claims.ClaimsInterface",
+            "kwargs": {},
+        },
+        "userinfo": {
+            "class": "idpyoidc.server.user_info.UserInfo",
+            "kwargs": {"db_file": full_path("users.json")},
+        }
+    }
+
+
 class TestOCIPersistence(object):
 
     @pytest.fixture(autouse=True)
-    def create_persistence_layer(self):
+    def create_persistence_layer(self, server_conf):
         # clean up after last time
         try:
             shutil.rmtree("storage")
         except FileNotFoundError:
             pass
 
-        self.server = OpenidCredentialIssuer(SERVER_CONF)
+        self.server = OpenidCredentialIssuer(server_conf)
         # storage = execute(STORE_CONF)
         # self.server.persistence = OPPersistence(storage, upstream_get=self.server.unit_get)
 
@@ -230,13 +233,14 @@ class TestOCIPersistence(object):
             "family_name": "Krall",
             "nickname": "Dina",
         }
-        self.server.persistence.store_claims(claims, 'diana')
+        client_subject_id = combine_client_subject_id("client_1", "diana")
+        self.server.persistence.store_claims(claims, client_subject_id)
 
-        _claims = self.server.persistence.load_claims('diana')
+        _claims = self.server.persistence.load_claims(client_subject_id)
         assert claims == _claims
 
         sid = self._create_session(auth_req=AUTH_REQ)
-        _claims2 = self.server.persistence.get_claims_from_sid(sid)
+        _claims2 = self.server.persistence.get_claims_from_branch_key(sid)
         assert _claims2 == _claims
         assert _claims2 == claims
 

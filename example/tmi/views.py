@@ -143,6 +143,16 @@ def fetch():
     _endpoint = current_app.federation_entity.get_endpoint('trust_mark_status')
     return service_endpoint(_endpoint)
 
+@entity.route('/trust_mark')
+def fetch():
+    _endpoint = current_app.federation_entity.get_endpoint('trust_mark')
+    return service_endpoint(_endpoint)
+
+@entity.route('/trust_mark_list')
+def fetch():
+    _endpoint = current_app.federation_entity.get_endpoint('trust_mark_list')
+    return service_endpoint(_endpoint)
+
 
 @entity.errorhandler(werkzeug.exceptions.BadRequest)
 def handle_bad_request(e):

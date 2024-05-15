@@ -2,26 +2,25 @@ import shutil
 
 import pytest
 import responses
-from idpyoidc.client.defaults import DEFAULT_OIDC_SERVICES
-from idpyoidc.server.oidc.token import Token
-from idpyoidc.server.oidc.userinfo import UserInfo
-
+from fedservice.appclient import ClientEntity
+from fedservice.appserver import ServerEntity
+from fedservice.appserver.oidc.authorization import Authorization
+from fedservice.appserver.oidc.registration import Registration
 from fedservice.defaults import DEFAULT_OIDC_FED_SERVICES
 from fedservice.defaults import LEAF_ENDPOINTS
 from fedservice.entity.function import apply_policies
 from fedservice.entity.function import collect_trust_chains
 from fedservice.entity.function import verify_trust_chains
-from fedservice.op import ServerEntity
-from fedservice.op.authorization import Authorization
-from fedservice.op.registration import Registration
-from fedservice.rp import ClientEntity
 from fedservice.utils import make_federation_combo
 from fedservice.utils import make_federation_entity
+from idpyoidc.client.defaults import DEFAULT_OIDC_SERVICES
+from idpyoidc.server.oidc.token import Token
+from idpyoidc.server.oidc.userinfo import UserInfo
 from idpyoidc.server.util import execute
+from satosa_idpyop.persistence.federation_entity import FEPersistence
 
-from src.satosa_openid4vci.persistence.federation_entity import FEPersistence
-from tests import create_trust_chain_messages
 from tests import CRYPT_CONFIG
+from tests import create_trust_chain_messages
 
 KEYDEFS = [
     {"type": "RSA", "key": "", "use": ["sig"]},
@@ -49,7 +48,7 @@ RESPONSE_TYPES_SUPPORTED = [
 SESSION_PARAMS = {"encrypter": CRYPT_CONFIG}
 
 STORE_CONF = {
-    "class": "satosa_openid4vci.core.storage.file.FilesystemDB",
+    "class": "satosa_idpyop.core.storage.file.FilesystemDB",
     "kwargs": {
         "fdir": "fed_entity_storage",
         "key_conv": "idpyoidc.util.Base64",
@@ -297,7 +296,7 @@ class TestComboCollect(object):
 
         trust_chains = verify_trust_chains(self.op, chains, leaf_ec)
         trust_chains = apply_policies(self.op, trust_chains)
-        self.op["federation_entity"].trust_chain = trust_chains
+        self.op["federation_entity"].store_trust_chain(RP_ID, trust_chains)
         #
         self.op["federation_entity"].persistence.store_state()
         #

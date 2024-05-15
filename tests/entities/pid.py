@@ -11,9 +11,8 @@ from idpyoidc.server.client_authn import ClientSecretBasic
 from idpyoidc.server.client_authn import ClientSecretPost
 from idpyoidc.server.oauth2.add_on.dpop import DPoPClientAuth
 from idpyoidc.server.user_info import UserInfo
-
 from openid4v.openid_credential_issuer import OpenidCredentialIssuer
-from openid4v.openid_credential_issuer.client_authn import WalletInstanceAttestationJWT
+from openid4v.openid_credential_issuer.client_authn import ClientAuthenticationAttestation
 
 SESSION_PARAMS = {
     "encrypter": {
@@ -42,7 +41,6 @@ def main(entity_id: str,
          authority_hints: Optional[List[str]],
          trust_anchors: Optional[dict],
          preference: Optional[dict] = None):
-
     entity = make_federation_combo(
         entity_id,
         preference=preference,
@@ -58,7 +56,7 @@ def main(entity_id: str,
                         "client_authn_methods": {
                             "client_secret_basic": ClientSecretBasic,
                             "client_secret_post": ClientSecretPost,
-                            "client_assertion": WalletInstanceAttestationJWT,
+                            "client_assertion": ClientAuthenticationAttestation,
                             "dpop_client_auth": DPoPClientAuth
                         },
                         "keys": {"key_defs": DEFAULT_KEY_DEFS},

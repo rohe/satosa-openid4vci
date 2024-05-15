@@ -118,9 +118,6 @@
               "pushed_authorization": {
                 "function": "idpyoidc.client.oauth2.add_on.par.add_support",
                 "kwargs": {
-                  "body_format": "urlencoded",
-                  "signing_algorithm": "RS256",
-                  "merge_rule": "lax",
                   "authn_method": {
                     "client_authentication_attestation": {
                       "class": "openid4v.client.client_authn.ClientAuthenticationAttestation"

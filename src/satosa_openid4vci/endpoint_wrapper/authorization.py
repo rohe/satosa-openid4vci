@@ -1,6 +1,7 @@
 import base64
 import logging
 import os
+from datetime import datetime
 from urllib.parse import parse_qs
 from urllib.parse import urlencode
 from urllib.parse import urlparse
@@ -166,12 +167,18 @@ class VCIAuthorization(Openid4VCIUtils):
         client_id = parse_req["client_id"]
         sub = internal_resp.subject_id
 
+        kwargs = {}
+        _timestamp = internal_resp["auth_info"].get("timestamp", "")
+        if _timestamp:
+            if _timestamp.endswith("Z"):
+                _timestamp = _timestamp[0:len(_timestamp) - 1] + "+00:00"
+            kwargs["authn_time"] = datetime.fromisoformat(_timestamp).timestamp()
+
         authn_event = create_authn_event(
             uid=sub,
             salt=base64.b64encode(os.urandom(self.app.salt_size)).decode(),
             authn_info=internal_resp.auth_info.auth_class_ref,
-            # TODO: authn_time=datetime.fromisoformat(
-            #  internal_resp.auth_info.timestamp).timestamp(),
+            **kwargs
         )
 
         _ec = endpoint.upstream_get("context")

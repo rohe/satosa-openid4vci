@@ -122,7 +122,11 @@ def federation_setup():
             "contacts": "operations@ta.example.com"
         }
     }
-    trust_anchor = execute_function('entities.ta.main', **kwargs)
+    try:
+        trust_anchor = execute_function('entities.ta.main', **kwargs)
+    except ModuleNotFoundError:
+        trust_anchor = execute_function('tests.entities.ta.main', **kwargs)
+
     trust_anchors = {TA_ID: trust_anchor.keyjar.export_jwks()}
     entity["trust_anchor"] = trust_anchor
 
@@ -140,7 +144,10 @@ def federation_setup():
         "authority_hints": [TA_ID],
         "trust_anchors": trust_anchors
     }
-    wallet_provider = execute_function("entities.wallet_provider.main", **kwargs)
+    try:
+        wallet_provider = execute_function('entities.wallet_provider.main', **kwargs)
+    except ModuleNotFoundError:
+        wallet_provider = execute_function('tests.entities.wallet_provider.main', **kwargs)
 
     trust_anchor.server.subordinate[WP_ID] = {
         "jwks": wallet_provider['federation_entity'].keyjar.export_jwks(),
@@ -166,7 +173,10 @@ def federation_setup():
         "trust_anchors": trust_anchors
     }
 
-    pid = execute_function("entities.pid.main", **kwargs)
+    try:
+        pid = execute_function('entities.pid.main', **kwargs)
+    except ModuleNotFoundError:
+        pid = execute_function('tests.entities.pid.main', **kwargs)
 
     trust_anchor.server.subordinate[PID_ID] = {
         "jwks": pid['federation_entity'].keyjar.export_jwks(),
@@ -193,7 +203,10 @@ def wallet_setup(federation):
         "entity_id": WALLET_ID,
         "trust_anchors": trust_anchors
     }
-    wallet = execute_function("entities.wallet.main", **kwargs)
+    try:
+        wallet = execute_function('entities.wallet.main', **kwargs)
+    except ModuleNotFoundError:
+        wallet = execute_function('tests.entities.wallet.main', **kwargs)
 
     # Need the wallet providers public keys. Could get this from the metadata
     wallet["federation_entity"].keyjar.import_jwks(
