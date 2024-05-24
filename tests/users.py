@@ -2,7 +2,7 @@
 A static dictionary with SAML test users that can be used as response.
 """
 
-from satosa.frontends.openid_connect import combine_claim_values
+from satosa_idpyop.core.claims import combine_claim_values
 
 USERS = {
     "testuser1": {

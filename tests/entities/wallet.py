@@ -50,16 +50,7 @@ def main(entity_id: str,
                                 "kwargs": {
                                     'dpop_signing_alg_values_supported': ["ES256"]
                                 }
-                            },
-                            # "pushed_authorization": {
-                            #     "function": "idpyoidc.client.oauth2.add_on.par.add_support",
-                            #     "kwargs": {
-                            #         "body_format": "jws",
-                            #         "signing_algorithm": "RS256",
-                            #         "http_client": None,
-                            #         "merge_rule": "lax",
-                            #     },
-                            # }
+                            }
                         },
                         "preference": {
                             "client_authn_methods": ["private_key_jwt"],
@@ -74,14 +65,15 @@ def main(entity_id: str,
                             "pid_eaa_authorization": {
                                 "class": "openid4v.client.pid_eaa.Authorization",
                                 "kwargs": {
-                                    "client_authn_methods": {"client_assertion": ClientAssertion}
+                                    "client_authn_methods": {"client_assertion": ClientAssertion},
+                                    "default_authn_method": "client_assertion"
                                 },
                             },
                             "pid_eaa_token": {
                                 "class": "openid4v.client.pid_eaa.AccessToken",
                                 "kwargs": {
                                     "client_authn_methods": {"client_assertion": ClientAssertion},
-                                    "default_authn_method": None
+                                    "default_authn_method": "client_assertion"
                                 }
                             },
                             "credential": {
@@ -89,7 +81,7 @@ def main(entity_id: str,
                                 "class": 'openid4v.client.pid_eaa.Credential',
                                 "kwargs": {
                                     "client_authn_methods": {"dpop_header": DPoPHeader},
-                                    "default_authn_method": None
+                                    "default_authn_method": "dpop_header"
                                 }
                             }
                         }

@@ -7,11 +7,11 @@ config:
   base_url: &base_url <base_url>
 
   storage:
-    class: "satosa_oidcop.core.storage.file.FilesystemDB"
+    class: satosa_oidcop.core.storage.file.FilesystemDB
     kwargs:
-      fdir: "storage"
-      key_conv: "idpyoidc.util.Base64"
-      value_conv: "idpyoidc.util.JSON"
+      fdir: storage
+      key_conv: idpyoidc.util.Base64
+      value_conv: idpyoidc.util.JSON
 
   default_target_backend: oidc
   salt_size: 8
@@ -20,24 +20,23 @@ config:
     server_info:
       entity_id: *base_url
       persistence:
-        class: satosa_openid4vci.persistence.federation_entity.FEPersistence
+        class: satosa_idpyop.persistence.federation_entity.FEPersistence
         kwargs:
           storage:
-            class: "satosa_openid4vci.core.storage.file.FilesystemDB"
+            class: satosa_idpyop.core.storage.file.FilesystemDB
             kwargs:
-              fdir: "fe_storage"
-              key_conv: "idpyoidc.util.Base64"
-              value_conv: "idpyoidc.util.JSON"
+              fdir: fe_storage
+              key_conv: idpyoidc.util.Base64
+              value_conv: idpyoidc.util.JSON
       key_config:
         key_defs:
-          - type: "RSA"
-            use: [ "sig" ]
-          - type: "EC"
-            crv: "P-256"
-            use: [ "sig" ]
-        private_path: "private/pid_fed_keys.json"
-        public_path: "public/pid_fed_keys.json"
-        read_only: false
+          - type: RSA
+            use:
+              - sig
+          - type: EC
+            crv: P-256
+            use:
+              - sig
       preference:
         organization_name: The OP operator
         contacts: operations@op.example.com
@@ -55,32 +54,32 @@ config:
         verify: false
       entity_type:
         openid_credential_issuer:
-          class: openid4v.openid_credential_issuer.OpenidCredentialIssuer
+          class: satosa_openid4vci.openid_credential_issuer.OpenidCredentialIssuer
           kwargs:
             config:
               issuer: *base_url
+              client_authn_methods:
+                client_authentication_attestation:
+                  openid4v.openid_credential_issuer.client_authn.ClientAuthenticationAttestation
+                client_secret_basic:
+                  idpyoidc.server.client_authn.ClientSecretBasic
+                client_secret_post:
+                  idpyoidc.server.client_authn.ClientSecretPost
+                dpop_client_auth:
+                  idpyoidc.server.oauth2.add_on.dpop.DPoPClientAuth
               persistence:
-                class: satosa_openid4vci.persistence.openid_provider.OPPersistence
+                class: satosa_idpyop.persistence.openid_provider.OPPersistence
                 kwargs:
                   storage:
-                    class: "satosa_openid4vci.core.storage.file.FilesystemDB"
+                    class: satosa_idpyop.core.storage.file.FilesystemDB
                     kwargs:
-                      fdir: "op_storage"
-                      key_conv: "idpyoidc.util.Base64"
-                      value_conv: "idpyoidc.util.JSON"
+                      fdir: op_storage
+                      key_conv: idpyoidc.util.Base64
+                      value_conv: idpyoidc.util.JSON
               httpc_params:
                 verify: false
                 timeout: 1
-              userinfo:
-                  class: openid4v.user_info.UserInfo
-                  kwargs:
-                    db_file: users.json
               preference:
-                claims_supported:
-                  - preferred_username
-                scopes_supported:
-                  - profile
-                  - email
                 subject_types_supported:
                   - public
                   - pairwise
@@ -94,57 +93,12 @@ config:
                   '':
                     - given_name
                     - family_name
-                    - birthdate
-                    - place_of_birth
-                    - unique_id
-                    - tax_id_code
+                    - name
+                    - email
+                    - nickname
                 credentials_supported:
-                  - credential_definition:
-                      credentialSubject:
-                        birthdate:
-                          display:
-                            - locale: en-US
-                              name: Date of Birth
-                            - locale: it-IT
-                              name: Data di Nascita
-                          mandatory: true
-                        family_name:
-                          display:
-                            - locale: en-US
-                              name: Current Family Name
-                            - locale: it-IT
-                              name: Cognome
-                          mandatory: true
-                        given_name:
-                          display:
-                            - locale: en-US
-                              name: Current First Name
-                            - locale: it-IT
-                              name: Nome
-                          mandatory: true
-                        place_of_birth:
-                          display:
-                            - locale: en-US
-                              name: Place of Birth
-                            - locale: it-IT
-                              name: Luogo di Nascita
-                          mandatory: true
-                        tax_id_code:
-                          display:
-                            - locale: en-US
-                              name: Tax Id Number
-                            - locale: it-IT
-                              name: Codice Fiscale
-                          mandatory: true
-                        unique_id:
-                          display:
-                            - locale: en-US
-                              name: Unique Identifier
-                            - locale: it-IT
-                              name: Identificativo univoco
-                          mandatory: true
-                      type:
-                        - PersonIdentificationData
+                  - format: vc+sd-jwt
+                    id: eudiw.pid.se
                     cryptographic_binding_methods_supported:
                       - jwk
                     cryptographic_suites_supported:
@@ -153,17 +107,44 @@ config:
                       - ES256
                       - ES512
                     display:
-                      - locale: en-US
-                        name: Swedish PID Provider Example
-                    format: vc+sd-jwt
-                    id: eudiw.pid.se
+                      name: Swedish PID Provider Example
+                      locale: en-US
+                    credential_definition:
+                      type:
+                        - PersonIdentificationData
+                      credentialSubject:
+                        name:
+                          display:
+                            - name: Name of a person
+                              locale: en-US
+                          mandatory: true
+                        family_name:
+                          display:
+                            - locale: en-US
+                              name: Current Family Name
+                          mandatory: true
+                        given_name:
+                          display:
+                            - locale: en-US
+                              name: Current First Name
+                          mandatory: true
+                        email:
+                          display:
+                            - locale: en-US
+                              name: Current email address
+                          mandatory: true
+                        nickname:
+                          mandatory: true
+                          display:
+                            - name: A persons nickname
+                              locale: en-US
               token_handler_args:
                 jwks_def:
                   private_path: private/pid_token_handler_keys.json
                   read_only: false
                   key_defs:
                     - type: oct
-                      bytes: '24'
+                      bytes: 24
                       use:
                         - enc
                       kid: code
@@ -175,14 +156,14 @@ config:
                         iterations: 1
                         keys:
                           key_defs:
-                            - kid: 'password'
-                              type: 'OCT'
+                            - kid: password
+                              type: OCT
                               use:
-                                - 'enc'
-                            - kid: 'salt'
-                              type: 'OCT'
+                                - enc
+                            - kid: salt
+                              type: OCT
                               use:
-                                - 'enc'
+                                - enc
                           private_path: private/pid_crypt_keys.json
                 token:
                   class: idpyoidc.server.token.jwt_token.JWTToken
@@ -199,28 +180,16 @@ config:
                         essential: true
               keys:
                 key_defs:
-                  - type: "RSA"
-                    use: [ "sig" ]
-                  - type: "EC"
-                    crv: "P-256"
-                    use: [ "sig" ]
+                  - type: RSA
+                    use:
+                      - sig
+                  - type: EC
+                    crv: P-256
+                    use:
+                      - sig
                 uri_path: jwks.json
                 private_path: private/pid_oci_keys.json
                 read_only: false
-              client_authn_methods:
-                client_secret_basic: idpyoidc.server.client_authn.ClientSecretBasic
-                client_secret_post: idpyoidc.server.client_authn.ClientSecretPost
-                client_assertion: openid4v.openid_credential_issuer.client_authn.ClientAssertion
-                dpop_client_auth: idpyoidc.server.oauth2.add_on.dpop.DPoPClientAuth
-                client_secret_jwt: idpyoidc.server.client_authn.ClientSecretJWT
-                private_key_jwt: idpyoidc.server.client_authn.PrivateKeyJWT
-                client_authentication_attestation: openid4v.openid_credential_issuer.client_authn.ClientAuthenticationAttestation
-              authentication:
-                anon:
-                  acr: urn:oasis:names:tc:SAML:2.0:ac:classes:InternetProtocolPassword
-                  class: idpyoidc.server.user_authn.user.NoAuthn
-                  kwargs:
-                    user: diana
               endpoint:
                 authorization:
                   path: authorization
@@ -262,13 +231,23 @@ config:
                     iterations: 1
                     keys:
                       key_defs:
-                        - kid: 'password'
-                          type: 'OCT'
+                        - kid: password
+                          type: OCT
                           use:
-                            - 'enc'
-                        - kid: 'salt'
-                          type: 'OCT'
+                            - enc
+                        - kid: salt
+                          type: OCT
                           use:
-                            - 'enc'
-                      private_path: private/pid_session_keys.json
-                      read_only: false
+                            - enc
+              userinfo:
+                class: satosa_idpyop.user_info.ProxyUserInfo
+                kwargs:
+                  credential_type_to_claims:
+                    PersonIdentificationData:
+                      - email
+                      - address.streetaddress
+                      - sub
+                      - name
+                      - family_name
+                      - given_name
+                      - nickname

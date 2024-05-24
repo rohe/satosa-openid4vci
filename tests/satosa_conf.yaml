@@ -5,57 +5,58 @@ op:
       class: satosa_idpyop.persistence.federation_entity.FEPersistence
       kwargs:
         storage:
-          class: "satosa_idpyop.core.storage.file.FilesystemDB"
+          class: satosa_idpyop.core.storage.file.FilesystemDB
           kwargs:
-            fdir: "fe_storage"
-            key_conv: "idpyoidc.util.Base64"
-            value_conv: "idpyoidc.util.JSON"
+            fdir: fe_storage
+            key_conv: idpyoidc.util.Base64
+            value_conv: idpyoidc.util.JSON
     key_config:
       key_defs:
-        - type: "RSA"
-          use: [ "sig" ]
-        - type: "EC"
-          crv: "P-256"
-          use: [ "sig" ]
+        - type: RSA
+          use:
+            - sig
+        - type: EC
+          crv: P-256
+          use:
+            - sig
     preference:
       organization_name: The OP operator
       homepage_uri: https://op.example.com
       contacts: operations@op.example.com
     authority_hints:
-      - "https://ta.example.com"
+      - https://ta.example.com
     endpoints:
       entity_configuration:
-        path: ".well-known/openid-federation"
-        class: 'fedservice.entity.server.entity_configuration.EntityConfiguration'
+        path: .well-known/openid-federation
+        class: fedservice.entity.server.entity_configuration.EntityConfiguration
     trust_anchors:
-      https://trust_anchor.example.com:
+      https://ta.example.com:
         keys:
-          - kty: 'RSA'
-            use: 'sig'
-            kid: 'OGFxMFJ6LXJFM3dWTWlzLXBHcUwydGY2Z3Vhb2hObXhkN0lIVllkLVJaSQ'
-            n: 'qeAZsdVwA90eNL-HJ9u3wsb_6pmz4GAkuLFtcYH2HzHHg7EIANOw9avhd3rzPgIpjjWFqFO6s3jiU_fSpFSadOKDZVPVnMc1m1PjmsnZinhjEBadKm9m1krvy2iDqMeJFQpjgSZ_Jwki2KCNuny_ESoyvQ5YJF50_HHhxxVCEi7h-Mta18ToQ5XEmCj1Sqcipjg55n_X8xUVL_L_OdU75_ICKMnTgFRXVNG5JQ_BQQoBenqBdIyhRMvZESLCRJoeScqByfrgEyBnrLac7P11aU3mnxCybmrBK98dKDkDRgONd3FRpjsF3D1lc_NA_U-i8sFkH_K998i1ykokwC6jPQ'
-            e: 'AQAB'
-          - kty: 'EC'
-            use: 'sig'
-            kid: 'dWpnd1A4NndNUTEzZlFfV2NsVjhnRE1zYTVlQ2xEZTdDR0U5SDNHX185VQ'
-            crv: 'P-256'
-            x: '2WQD73J1HcMQs8gZq43o2YvwgbKm1j_SHJgseUgniko'
-            y: 'Pn_HidM6WjUJhAnAYKTdNaLVcM2ChgUgQgZXW4lY6bs'
+          none
     entity_type:
       openid_credential_issuer:
         class: satosa_openid4vci.openid_credential_issuer.OpenidCredentialIssuer
         kwargs:
           config:
             issuer: https://example.com/
+            client_authn_methods:
+              client_authentication_attestation:
+                openid4v.openid_credential_issuer.client_authn.ClientAuthenticationAttestation
+              client_secret_basic:
+                idpyoidc.server.client_authn.ClientSecretBasic
+              client_secret_post:
+                idpyoidc.server.client_authn.ClientSecretPost
+              dpop_client_auth:
+                idpyoidc.server.oauth2.add_on.dpop.DPoPClientAuth
             persistence:
-              class: satosa_idpyop.persistence.federation_entity.FEPersistence
+              class: satosa_idpyop.persistence.openid_provider.OPPersistence
               kwargs:
                 storage:
-                  class: "satosa_idpyop.core.storage.file.FilesystemDB"
+                  class: satosa_idpyop.core.storage.file.FilesystemDB
                   kwargs:
-                    fdir: "op_storage"
-                    key_conv: "idpyoidc.util.Base64"
-                    value_conv: "idpyoidc.util.JSON"
+                    fdir: op_storage
+                    key_conv: idpyoidc.util.Base64
+                    value_conv: idpyoidc.util.JSON
             httpc_params:
               verify: false
               timeout: 1
@@ -69,13 +70,62 @@ op:
                 - implicit
                 - urn:ietf:params:oauth:grant-type:jwt-bearer
                 - refresh_token
+              attribute_disclosure:
+                "":
+                  - given_name
+                  - family_name
+                  - name
+                  - email
+                  - nickname
+              credentials_supported:
+                - format: vc+sd-jwt
+                  id: eudiw.pid.se
+                  cryptographic_binding_methods_supported:
+                    - jwk
+                  cryptographic_suites_supported:
+                    - RS256
+                    - RS512
+                    - ES256
+                    - ES512
+                  display:
+                    name: Swedish PID Provider Example
+                    locale: en-US
+                  credential_definition:
+                    type:
+                      - PersonIdentificationData
+                    credentialSubject:
+                      name:
+                        display:
+                          - name: Name of a person
+                            locale: en-US
+                        mandatory: true
+                      family_name:
+                        display:
+                          - locale: en-US
+                            name: Current Family Name
+                        mandatory: true
+                      given_name:
+                        display:
+                          - locale: en-US
+                            name: Current First Name
+                        mandatory: true
+                      email:
+                        display:
+                          - locale: en-US
+                            name: Current email address
+                        mandatory: true
+                      nickname:
+                        mandatory: true
+                        display:
+                          - name: A persons nickname
+                            locale: en-US
             token_handler_args:
               jwks_def:
                 private_path: private/token_jwks.json
                 read_only: false
                 key_defs:
                   - type: oct
-                    bytes: '24'
+                    bytes: 24
                     use:
                       - enc
                     kid: code
@@ -87,14 +137,14 @@ op:
                       iterations: 1
                       keys:
                         key_defs:
-                          - kid: 'password'
-                            type: 'OCT'
+                          - kid: password
+                            type: OCT
                             use:
-                              - 'enc'
-                          - kid: 'salt'
-                            type: 'OCT'
+                              - enc
+                          - kid: salt
+                            type: OCT
                             use:
-                              - 'enc'
+                              - enc
               token:
                 class: idpyoidc.server.token.jwt_token.JWTToken
                 kwargs:
@@ -112,17 +162,20 @@ op:
                       essential: true
             keys:
               key_defs:
-                - type: "RSA"
-                  use: [ "sig" ]
-                - type: "EC"
-                  crv: "P-256"
-                  use: [ "sig" ]
-              uri_path: static/jwks.json
+                - type: RSA
+                  use:
+                    - sig
+                - type: EC
+                  crv: P-256
+                  use:
+                    - sig
+              uri_path: jwks.json
               public_path: static/jwks.json
+              read_only: false
             endpoint:
               authorization:
                 path: authorization
-                class: fedservice.appserver.oidc.authorization.Authorization
+                class: openid4v.openid_credential_issuer.authorization.Authorization
                 kwargs:
                   response_modes_supported:
                     - query
@@ -140,24 +193,19 @@ op:
                 class: openid4v.openid_credential_issuer.access_token.Token
                 kwargs:
                   client_authn_method:
-                    - client_secret_post
-                    - client_secret_basic
-                    - client_secret_jwt
-                    - private_key_jwt
+                    - client_authentication_attestation
               credential:
                 path: credential
                 class: openid4v.openid_credential_issuer.credential.Credential
                 kwargs:
                   client_authn_method:
-                    dpop_client_auth:
-                      class: idpyoidc.server.oauth2.add_on.dpop.DPoPClientAuth
+                    - dpop_client_auth
               pushed_authorization:
                 path: pushed_authorization
                 class: idpyoidc.server.oauth2.pushed_authorization.PushedAuthorization
                 kwargs:
                   client_authn_method:
-                    client_assertion:
-                      class": openid4v.openid_credential_issuer.client_authn.ClientAssertion
+                    - client_authentication_attestation
             template_dir: template
             session_params:
               encrypter:
@@ -165,14 +213,23 @@ op:
                   iterations: 1
                   keys:
                     key_defs:
-                      -
-                        kid: 'password'
-                        type: 'OCT'
+                      - kid: password
+                        type: OCT
                         use:
-                          - 'enc'
-                      -
-                        kid: 'salt'
-                        type: 'OCT'
+                          - enc
+                      - kid: salt
+                        type: OCT
                         use:
-                          - 'enc'
-
+                          - enc
+            userinfo:
+              class: satosa_idpyop.user_info.ProxyUserInfo
+              kwargs:
+                credential_type_to_claims:
+                  PersonIdentificationData:
+                    - email
+                    - address.streetaddress
+                    - sub
+                    - name
+                    - family_name
+                    - given_name
+                    - nickname

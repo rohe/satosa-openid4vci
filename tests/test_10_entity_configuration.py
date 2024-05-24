@@ -31,7 +31,7 @@ INTERNAL_ATTRIBUTES = {
 BASE_URL = "https://ci.example.com"
 
 
-def auth_req_callback_func(x):
+def auth_req_callback_func(c, x):
     return x
 
 

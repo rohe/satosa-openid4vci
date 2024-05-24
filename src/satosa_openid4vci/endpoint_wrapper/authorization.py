@@ -10,14 +10,14 @@ import satosa
 from idpyoidc.message.oauth2 import AuthorizationErrorResponse
 from idpyoidc.message.oauth2 import AuthorizationResponse
 from idpyoidc.message.oauth2 import ResponseMessage
+from idpyoidc.node import topmost_unit
 from idpyoidc.server import Endpoint
 from idpyoidc.server.authn_event import create_authn_event
 from openid4v.message import AuthorizationRequest
-from satosa_openid4vci.utils import Openid4VCIUtils
-
-from ..core import ExtendedContext
-from ..core.claims import combine_claim_values
-from ..core.response import JsonResponse
+from satosa_idpyop.core import ExtendedContext
+from satosa_idpyop.core.claims import combine_claim_values
+from satosa_idpyop.core.response import JsonResponse
+from satosa_idpyop.endpoint_wrapper import EndPointWrapper, get_http_info
 
 logger = logging.getLogger(__name__)
 
@@ -34,17 +34,18 @@ from satosa.response import SeeOther
 logger = logging.getLogger(__name__)
 
 
-class VCIAuthorization(Openid4VCIUtils):
+class AuthorizationEndpointWrapper(EndPointWrapper):
     name = "authorization"
     msg_type = AuthorizationRequest
     response_cls = AuthorizationResponse
     error_msg = AuthorizationErrorResponse
+    wraps = ['authorization']
 
-    def __init__(self, app, auth_req_callback_func, converter):  # pragma: no cover
-        Openid4VCIUtils.__init__(self, app)
-        self.auth_req_callback_func = auth_req_callback_func
-        self.converter = converter
-        self.entity_type = app.server["openid_credential_issuer"]
+    def __init__(self, upstream_get, endpoint, **kwargs):  # pragma: no cover
+        EndPointWrapper.__init__(self, upstream_get, endpoint, **kwargs)
+        self.auth_req_callback_func = kwargs.get("auth_req_callback_func", None)
+        self.converter = kwargs.get("converter", None)
+        # self.entity_type = app.server["openid_credential_issuer"]
 
     def __call__(self, context: ExtendedContext):
         """
@@ -54,14 +55,20 @@ class VCIAuthorization(Openid4VCIUtils):
         self.log_request(context, "Authorization endpoint request")
         self.load_cdb(context)
 
-        endpoint = self.entity_type.endpoint["authorization"]
-
-        self.get_http_info(context)
-        internal_req = self.handle_authn_request(context, endpoint)
+        get_http_info(context)
+        internal_req = self.handle_authn_request(context, self.endpoint)
         if not isinstance(internal_req, InternalData):  # pragma: no cover
             return self.send_response(internal_req)
 
         return self.auth_req_callback_func(context, internal_req)
+
+    def get_entity_type(self):
+        return self.upstream_get('unit')
+
+    def send_response(self, response):
+        _entity_type = self.get_entity_type()
+        _entity_type.persistence.flush_session_manager()
+        return response
 
     def _handle_authn_request(self, context: ExtendedContext, endpoint):
         """
@@ -76,29 +83,18 @@ class VCIAuthorization(Openid4VCIUtils):
         logger.debug(f"{endpoint}")
         logger.debug(f"request at frontend: {context.request}")
 
-        http_info = self.get_http_info(context)
+        http_info = get_http_info(context)
         self.load_cdb(context)
-        parse_req = self.parse_request(
-            endpoint, context.request, http_info=http_info)
+        parse_req = self.parse_request(context.request, http_info)
         if isinstance(parse_req, AuthorizationErrorResponse):
             logger.debug(f"{context.request}, {parse_req._dict}")
             return self.send_response(JsonResponse(parse_req._dict))
 
-        self.entity_type.persistence.restore_state(parse_req, http_info)
+        _entity_type = self.upstream_get("unit")
+        _entity_type.persistence.restore_state(parse_req, http_info)
 
-        # proc_req = self.process_request(endpoint, context, parse_req, http_info)
-        # if isinstance(proc_req, JsonResponse):  # pragma: no cover
-        #     return proc_req
-        #
-        # try:
-        #     endpoint.do_response(request=context.request, **proc_req)
-        # except Exception as excp:  # pragma: no cover
-        #     # TODO - something to be done with the help of unit test
-        #     # this should be for humans if auth code flow
-        #     # and JsonResponse for other flows ...
-        #     self.handle_error(excp=excp)
-
-        context.state[self.name] = {"oidc_request": context.request}
+        _unit = topmost_unit(self)
+        context.state[_unit.frontend_name] = {"oidc_request": context.request}
 
         client_id = parse_req.get("client_id")
         _client_conf = endpoint.upstream_get("context").cdb[client_id]
@@ -122,7 +118,6 @@ class VCIAuthorization(Openid4VCIUtils):
         if _claims_supported:
             internal_req.attributes = self.converter.to_internal_filter("openid", _claims_supported)
 
-        context.target_backend = self.app.default_target_backend
         context.internal_data = internal_req
         return internal_req
 
@@ -138,6 +133,8 @@ class VCIAuthorization(Openid4VCIUtils):
         internal_req = self._handle_authn_request(context, endpoint)
         if not isinstance(internal_req, InternalData):
             return self.send_response(internal_req)
+        logger.debug(f"InternalData: {internal_req}")
+        logger.debug(f"Context: {context}")
         return self.auth_req_callback_func(context, internal_req)
 
     def _handle_backend_response(self, context: ExtendedContext, internal_resp):
@@ -151,15 +148,16 @@ class VCIAuthorization(Openid4VCIUtils):
         :type internal_resp: satosa.internal.InternalData
         :return: HTTP response to the client
         """
-        http_info = self.get_http_info(context)
+        http_info = get_http_info(context)
         oidc_req = context.state[self.name]["oidc_request"]
         endpoint = self.app.server.endpoint["authorization"]
-        self.entity_type.persistence.restore_client_info(oidc_req["client_id"])
+        _entity_type= self.upstream_get("unit")
+        _entity_type.persistence.restore_client_info(oidc_req["client_id"])
 
         # not using self._parse_request cause of "Missing required attribute 'response_type'"
         parse_req = AuthorizationRequest().from_urlencoded(urlencode(oidc_req))
 
-        proc_req = self.process_request(endpoint, context, parse_req, http_info)
+        proc_req = self.process_request(context, parse_req, http_info)
 
         if isinstance(proc_req, JsonResponse):  # pragma: no cover
             return self.send_response(proc_req)
@@ -238,7 +236,8 @@ class VCIAuthorization(Openid4VCIUtils):
             logger.debug(f"Redirect to: {redirect_url}")
             resp = SeeOther(redirect_url)
         else:  # pragma: no cover
-            self.entity_type.persistence.flush_session_manager()
+            _entity_type = self.upstream_get("unit")
+            _entity_type.persistence.flush_session_manager()
             raise NotImplementedError()
 
         # I don't flush in-mem db because it will be flushed by handle_authn_response
@@ -260,7 +259,8 @@ class VCIAuthorization(Openid4VCIUtils):
         # del context.state[self.name]
 
         # store oidc session with user claims
-        self.entity_type.persistence.store_state(claims=combined_claims)
+        _entity_type = self.upstream_get("unit")
+        _entity_type.persistence.store_state(claims=combined_claims)
         return self.send_response(response)
 
     def handle_backend_error(self, exception: Exception):

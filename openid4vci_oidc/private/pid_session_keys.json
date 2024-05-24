@@ -1,1 +1,16 @@
-{"keys": [{"kty": "oct", "use": "enc", "kid": "password", "k": "E29j1YG1FkxwHQLdzIA5dTde-JWAWJWc"}, {"kty": "oct", "use": "enc", "kid": "salt", "k": "-NaA1OZOw6cjm1VzZaI-omxn0jExOD6Z"}]}
+{
+  "keys": [
+    {
+      "kty": "oct",
+      "use": "enc",
+      "kid": "password",
+      "k": "E29j1YG1FkxwHQLdzIA5dTde-JWAWJWc"
+    },
+    {
+      "kty": "oct",
+      "use": "enc",
+      "kid": "salt",
+      "k": "-NaA1OZOw6cjm1VzZaI-omxn0jExOD6Z"
+    }
+  ]
+}

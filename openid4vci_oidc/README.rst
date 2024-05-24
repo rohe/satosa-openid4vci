@@ -14,7 +14,7 @@ Federation keys for the trust anchor are created when going through the steps in
 
 The TA's keys can be found in::
 
-    setup_federation/trust_anchor.json
+    fedservice/setup_federation/trust_anchor.json
 
 This key set has to be copied into::
 
@@ -22,7 +22,7 @@ This key set has to be copied into::
 
 The place where you should copy the key information to looks like this::
 
-    trust_anchors:
+    fedservice/trust_anchors:
         <TRUST_ANCHORS>
 
 To convert the json created by setup.py to yaml needed by SATOSA 
@@ -96,7 +96,7 @@ You should do this by creating a file with something like this inside::
 
 If you start the credential issuer once it will create its keys and place copies of them in certain files.
 The file you have to look for is **public/pid_fed_keys.json**. In it you should have the needed information.
-Now copy this file over to the setup_federation site and run (assumed that ci.json is the name of the file)::
+Now copy this file over to the setup_federation site and run (assumed that *ci.json* is the name of the file)::
 
     ./add_info.py -s ci.json -t trust_anchor/subordinates
 

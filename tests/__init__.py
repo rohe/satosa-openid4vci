@@ -1,3 +1,6 @@
+import os
+import shutil
+
 from cryptojwt.utils import importer
 from fedservice.entity import FederationEntity
 from fedservice.entity.utils import get_federation_entity
@@ -107,7 +110,7 @@ def federation_setup():
     TA_ID = "https://ta.example.org"
     WP_ID = "https://wp.example.org"
     PID_ID = "https://pid.example.org"
-
+    QEAA_ID = "https://qeaa.example.org"
     entity = {}
 
     ##################
@@ -156,11 +159,9 @@ def federation_setup():
     }
     entity["wallet_provider"] = wallet_provider
 
-
     #########################################
     # OpenidCredentialIssuer - PID version
     #########################################
-
 
     kwargs = {
         "entity_id": PID_ID,
@@ -185,10 +186,37 @@ def federation_setup():
     }
     entity["pid_issuer"] = pid
 
+    #########################################
+    # OpenidCredentialIssuer - SWAMID version
+    #########################################
+
+    kwargs = {
+        "entity_id": QEAA_ID,
+        "preference": {
+            "organization_name": "The SWAMID Credential Issuer",
+            "homepage_uri": "https://qeaa.example.com",
+            "contacts": "operations@qeaa.example.com"
+        },
+        "authority_hints": [TA_ID],
+        "trust_anchors": trust_anchors
+    }
+
+    try:
+        qeaa = execute_function('entities.cid.main', **kwargs)
+    except ModuleNotFoundError:
+        qeaa = execute_function('tests.entities.cid.main', **kwargs)
+
+    trust_anchor.server.subordinate[QEAA_ID] = {
+        "jwks": qeaa['federation_entity'].keyjar.export_jwks(),
+        'authority_hints': [TA_ID],
+        "registration_info": {"entity_types": ["federation_entity", "openid_credential_issuer"]},
+    }
+    entity["qeaa_issuer"] = qeaa
+
     return entity
 
 
-WALLET_ID = "s6BhdRkqt3"
+WALLET_ID = "I_am_the_wallet"
 
 
 def wallet_setup(federation):
@@ -214,3 +242,18 @@ def wallet_setup(federation):
         federation["wallet_provider"].entity_id)
 
     return wallet
+
+
+BASEDIR = os.path.abspath(os.path.dirname(__file__))
+
+
+def full_path(local_file):
+    return os.path.join(BASEDIR, local_file)
+
+
+def clear_folder(folder):
+    for root, dirs, files in os.walk(f'{full_path(folder)}'):
+        for f in files:
+            os.unlink(os.path.join(root, f))
+        for d in dirs:
+            shutil.rmtree(os.path.join(root, d))

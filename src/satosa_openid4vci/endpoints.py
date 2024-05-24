@@ -6,14 +6,16 @@ from idpyoidc.message.oauth2 import AccessTokenRequest
 from idpyoidc.message.oidc import TokenErrorResponse
 from idpyoidc.server.exception import NoSuchGrant
 from idpyoidc.server.exception import UnknownClient
-from openid4v.message import auth_detail_list_deser
 from openid4v.message import AuthorizationDetail
 from openid4v.message import AuthorizationRequest
+from openid4v.message import auth_detail_list_deser
 from satosa.context import Context
+from satosa_idpyop.endpoint_wrapper.token import TokenEndpointWrapper
 from satosa_openid4vci.core import ExtendedContext
-from satosa_openid4vci.core.response import JsonResponse
 from satosa_openid4vci.core.response import JWSResponse
-from satosa_openid4vci.endpoint_wrapper.authorization import VCIAuthorization
+from satosa_openid4vci.core.response import JsonResponse
+from satosa_openid4vci.endpoint_wrapper.authorization import AuthorizationEndpointWrapper
+from satosa_openid4vci.endpoint_wrapper.credential import CredentialEndpointWrapper
 from satosa_openid4vci.utils import Openid4VCIUtils
 
 logger = logging.getLogger(__name__)
@@ -24,9 +26,17 @@ class Openid4VCIEndpoints(Openid4VCIUtils):
 
     def __init__(self, app, auth_req_callback_func, converter):  # pragma: no cover
         Openid4VCIUtils.__init__(app)
-        self.endpoint_wrapper = {
-            "authorization": VCIAuthorization(self.app, auth_req_callback_func, converter)
-        }
+        _unit_get = self.app.server["openid_credential_issuer"].unit_get
+
+        self.endpoint_wrapper = {}
+        for endpoint_name, wrapper in {"authorization": AuthorizationEndpointWrapper,
+                                       "credential": CredentialEndpointWrapper,
+                                       "token": TokenEndpointWrapper}.items():
+            _endpoint = self.app.server["openid_credential_issuer"].get_endpoint(endpoint_name)
+            self.endpoint_wrapper[endpoint_name] = wrapper(upstream_get=_unit_get,
+                                                           endpoint=_endpoint,
+                                                           auth_req_callback_func=auth_req_callback_func,
+                                                           converter=converter)
 
     def jwks_endpoint(self, context: Context):
         """
@@ -87,10 +97,12 @@ class Openid4VCIEndpoints(Openid4VCIUtils):
         _fed_entity = self.app.server["federation_entity"]
         _fed_entity.persistence.restore_state()
 
+        logger.debug(f"Default target backend: {self.app.default_target_backend}")
+        context.target_backend = self.app.default_target_backend
+
         resp = self.endpoint_wrapper["authorization"](context)
 
         _fed_entity.persistence.store_state()
-
         return resp
 
     def token_endpoint(self, context: ExtendedContext):
@@ -102,79 +114,17 @@ class Openid4VCIEndpoints(Openid4VCIUtils):
         :param context: the current context
         :return: HTTP response to the client
         """
-        _env = self._request_setup(context, "openid_credential_issuer", "token")
+        logger.debug("At the Token Endpoint")
 
-        try:
-            self.load_cdb(context)
-        except UnknownClient:
-            return self.send_response(
-                JsonResponse(
-                    {
-                        "error": "unauthorized_client",
-                        "error_description": "unknown client",
-                    }
-                )
-            )
+        response = self.endpoint_wrapper["token"](context)
 
-        raw_request = AccessTokenRequest().from_urlencoded(urlencode(context.request))
-
-        _entity_type = _env["entity_type"]
-        # in token endpoint we cannot parse a request without having loaded cdb and session first
-        try:
-            _entity_type.persistence.restore_state(raw_request, _env["http_info"])
-        except NoSuchGrant:
-            _response = JsonResponse(
-                {
-                    "error": "invalid_request",
-                    "error_description": "Not owner of token",
-                },
-                status="403",
-            )
-            return self.send_response(_response)
-
-        parse_req = self.parse_request(_env["endpoint"], context.request, http_info=_env["http_info"])
-        ec = _env["endpoint"].upstream_get("context")
-        # _entity_type.persistence.load_all_claims()
-        proc_req = self.process_request(_env["endpoint"], context, parse_req, _env["http_info"])
-
-        # if ec.userinfo != None:
-        #     ec.userinfo.flush()
-
-        if isinstance(proc_req, JsonResponse):  # pragma: no cover
-            return self.send_response(proc_req)
-        elif isinstance(proc_req, TokenErrorResponse):
-            return self.send_response(JsonResponse(proc_req.to_dict(), status="403"))
-
-        if isinstance(proc_req["response_args"].get("scope", str), list):
-            proc_req["response_args"]["scope"] = " ".join(
-                proc_req["response_args"]["scope"]
-            )
-
-        # should only be one client in the client db
-        _client_id = list(_entity_type.context.cdb.keys())[0]
-        _entity_type.persistence.store_state(_client_id)
-
-        # better return jwt or jwe here!
-        response = JsonResponse(proc_req["response_args"])
         return self.send_response(response)
 
     def credential_endpoint(self, context: ExtendedContext):
-        _env = self._request_setup(context, "openid_credential_issuer", "credential")
-        _env["entity_type"].persistence.restore_state(context.request, _env["http_info"])
+        logger.debug("At the Credential Endpoint")
 
-        logger.debug(f"request: {context.request}")
-        logger.debug(f"https_info: {_env['http_info']}")
-        parse_req = self.parse_request(_env["endpoint"], context.request, http_info=_env["http_info"])
-        logger.debug(f"parse_req: {parse_req}")
-        proc_req = self.process_request(_env["endpoint"], context.request, parse_req, _env["http_info"])
-        if isinstance(proc_req, JsonResponse):  # pragma: no cover
-            return self.send_response(proc_req)
+        response = self.endpoint_wrapper["credential"](context)
 
-        logger.debug(f"Process result: {proc_req}")
-        if isinstance(proc_req["response_args"], Message):
-            response = JsonResponse(proc_req["response_args"].to_dict())
-        else:
-            response = JsonResponse(proc_req["response_args"])
         return self.send_response(response)
 
     def pushed_authorization_endpoint(self, context: ExtendedContext):
@@ -186,9 +136,13 @@ class Openid4VCIEndpoints(Openid4VCIUtils):
 
         # This is not how it should be done, but it has to be done.
         logger.debug(f"Before adl: {context.request['authorization_details']}")
-        adl = auth_detail_list_deser(context.request["authorization_details"], sformat="urlencoded")
+        if isinstance(context.request, Message):
+            adl = context.request["authorization_details"]
+        else:
+            adl = auth_detail_list_deser(context.request["authorization_details"], sformat="urlencoded")
         logger.debug(f"adl: {adl} {type(adl)}")
-        context.request["authorization_details"] = [v.to_dict() for v in adl]
+        _adl = [v.to_dict() for v in adl]
+        context.request["authorization_details"] = _adl
 
         logger.debug(f"Incoming request: {context.request}")
         parse_req = self.parse_request(_env["endpoint"], context.request, http_info=_env["http_info"])

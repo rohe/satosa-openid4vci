@@ -55,7 +55,14 @@
         }
       ]
     },
-    "trust_anchors": "file:trust_anchor_sunet.json",
+    "trust_anchors": {
+      "class": "idpyoidc.storage.abfile.AbstractFileSystem",
+      "kwargs": {
+        "fdir": "flask_wallet/trust_anchors",
+        "key_conv": "idpyoidc.util.Base64",
+        "value_conv": "idpyoidc.util.JSON"
+      }
+    },
     "services": [
       "entity_configuration",
       "entity_statement",
@@ -170,6 +177,7 @@
     "server_key": "certs/example.key",
     "cert_chain": null,
     "port": 5005,
-    "domain": "127.0.0.1"
+    "domain": "127.0.0.1",
+    "debug": true
   }
 }

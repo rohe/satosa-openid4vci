@@ -4,8 +4,8 @@ import pytest
 import responses
 from fedservice.appclient import ClientEntity
 from fedservice.appserver import ServerEntity
-from fedservice.appserver.oidc.authorization import Authorization
-from fedservice.appserver.oidc.registration import Registration
+from fedservice.appserver.oauth2.authorization import Authorization
+from fedservice.appserver.oauth2.registration import Registration
 from fedservice.defaults import DEFAULT_OIDC_FED_SERVICES
 from fedservice.defaults import LEAF_ENDPOINTS
 from fedservice.entity.function import apply_policies

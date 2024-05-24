@@ -30,7 +30,7 @@ IGNORED_HEADERS = ["cookie", "user-agent"]
 
 class Openid4VCIUtils(object):
     """
-    Utilities used by all endpoints
+    Utilities used by all wrapper endpoints
     """
 
     def __init__(self, app=None):  # pragma: no cover

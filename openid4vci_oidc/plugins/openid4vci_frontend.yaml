@@ -7,11 +7,11 @@ config:
   base_url: &base_url <base_url>
 
   storage:
-    class: "satosa_oidcop.core.storage.file.FilesystemDB"
+    class: satosa_oidcop.core.storage.file.FilesystemDB
     kwargs:
-      fdir: "storage"
-      key_conv: "idpyoidc.util.Base64"
-      value_conv: "idpyoidc.util.JSON"
+      fdir: storage
+      key_conv: idpyoidc.util.Base64
+      value_conv: idpyoidc.util.JSON
 
   default_target_backend: oidc
   salt_size: 8
@@ -20,81 +20,80 @@ config:
     server_info:
       entity_id: *base_url
       persistence:
-        class: satosa_openid4vci.persistence.federation_entity.FEPersistence
+        class: satosa_idpyop.persistence.federation_entity.FEPersistence
         kwargs:
           storage:
-            class: "satosa_openid4vci.core.storage.file.FilesystemDB"
+            class: satosa_idpyop.core.storage.file.FilesystemDB
             kwargs:
-              fdir: "fe_storage"
-              key_conv: "idpyoidc.util.Base64"
-              value_conv: "idpyoidc.util.JSON"
+              fdir: fe_storage
+              key_conv: idpyoidc.util.Base64
+              value_conv: idpyoidc.util.JSON
       key_config:
         key_defs:
-          - type: "RSA"
-            use: [ "sig" ]
-          - type: "EC"
-            crv: "P-256"
-            use: [ "sig" ]
-        private_path: "private/pid_fed_keys.json"
-        public_path: "public/pid_fed_keys.json"
+          - type: RSA
+            use:
+              - sig
+          - type: EC
+            crv: P-256
+            use:
+              - sig
+        private_path: "public/fed_jwks.json"
         read_only: false
       preference:
         organization_name: The OP operator
         contacts: operations@op.example.com
       authority_hints:
-        - "https://127.0.0.1:7003"
+        - https://127.0.0.1:7003
       trust_marks:
-        - eyJhbGciOiJSUzI1NiIsImtpZCI6IlRGSXROekZhT0dzdFRsQldhR1ZtWmpjNVJrUm5XSFIxWlMxTVprUnljV05zU0dWbFJuUkZTa1JLV1EifQ.eyJpYXQiOiAxNzExMDExMjI0LCAiaWQiOiAiaHR0cDovL2RjNGV1LmV4YW1wbGUuY29tL1BlcnNvbklkZW50aWZpY2F0aW9uRGF0YS9zZSIsICJzdWIiOiAiaHR0cHM6Ly8xMjcuMC4wLjE6ODA4MCIsICJleHAiOiAxNzEzNjAzMjI0LCAiaXNzIjogImh0dHBzOi8vMTI3LjAuMC4xOjYwMDAifQ.N60XODDMgavl5BHe3acxjiwr5kY7EFE_UNVUQT4sf1e22-FesNhD4EXagQbO1EdZu1_mIn8mTJbNhWfmPABKuwtyGGImlu2s3riYlsyj9KuG5ntsVsPKXqMy_feltSVzC4nJyluYNFMZ28p9TiuU1CZOqTwSAnEguqI-Cj38IDl3-_1wpZ3Ag7Fg9dfevbSNND_nM4TZ9Dyg8hKQ-ZVHwfKWTo8l215Ou4VNruILkRfD102S2qj4paNabcoSTFby5EpWZTP7U56LIAdyS52g50lVJrlXCOLuLimk3oedpAfK62Xvhxr8d-ORzU5ObRucSzmazs42r9BuB-9wGOKnGg
+        - eyJhbGciOiJSUzI1NiIsImtpZCI6IlMycDFiek5GWjNGa09IVnBPV1JsTUVWNGFGWm9SVVZGU0hnelR6ZEVWbEJXVFVvemVqQkRVWGgwT0EifQ.eyJpYXQiOiAxNzE2NDUwMzgwLCAiaWQiOiAiaHR0cDovL2RjNGV1LmV4YW1wbGUuY29tL1BlcnNvbklkZW50aWZpY2F0aW9uRGF0YS9zZSIsICJzdWIiOiAiaHR0cHM6Ly8xMjcuMC4wLjE6ODA4MCIsICJleHAiOiAxNzE5MDQyMzgwLCAiaXNzIjogImh0dHBzOi8vMTI3LjAuMC4xOjYwMDAifQ.dQJ7cxUhYAgNbjBfUaSns4HgJjcvfc82pAsSLZswMRSyDqoxzU9XbMpmwuOn-RLhXVR1vQu-lP6hEUJanxdNLXZrf7LrRlVZ5FsDb3vYSuDSaGV335rAbFR4PTGY-tQ4raMbtFolskYfbDoXPBqT6N6mLrdsQyhBwd5QbY-1vr-mEhZIvzdxiAI4ERA6jUfapl8ASSE_V4MbD9VnMtwbq7p9CQC33Pui-7GiPX_hFifj6ioh10Ufb-ESzr3dzQ-WFJCpmK2Ans_Q05zAxxW8dOxk4Uohf-OWnvaOXZ6Et9o1QiXG1b1auiu_tIBXDogdphjCWGK7TgHgWJVAuVyS6A
       endpoints:
         entity_configuration:
-          path: ".well-known/openid-federation"
-          class: 'fedservice.entity.server.entity_configuration.EntityConfiguration'
+          path: .well-known/openid-federation
+          class: fedservice.entity.server.entity_configuration.EntityConfiguration
       trust_anchors:
         https://127.0.0.1:7003:
           keys:
-            -
-              kty: RSA
+            - kty: RSA
               use: sig
-              kid: U0pnajZ4bWZ5VXVFLXFmTEtWQzJ1Nk1kUURUandWc2NocHkwUkNVc2lwZw
+              kid: ZXFYbDlqWkNzaWd1eDNseTVfWFBNUWRFX3lrQ2Y3b2owaWVMTjNhcnpBMA
               e: AQAB
-              n: tRZ5arhBBiLzpZ6uBRvYFkVXva1QGNlmBi_ZQKIUU7VSGjVWu07c2q2TMVXbgvGbdN1HpbdXmjZhxF89VmYLy6KN4lJj8XjVfXULtdQydjDFV5DBKjlUaSrKiayJaP8Z2GLsGexqost167ZWbqB8CLCw1yW9BsPYxH2fRd7X-T1_SBHwuDCfcmkOVDVYVlxTU4-ZDfHL3xryS5qs15mTjJ44YwWygdd5tP7wmg_bH3KwOzp3hcO7NGerbWJkI7X1NW3-33twmGaUlU-CHCmHDhQaKFle-mSu8w4yIlXaTaPsdXVeIDLqIifYei7-ZAVt8DZZEdL4T1qrqaIvw5kKVQ
-            -
-              kty: EC
+              n: qHE53SwNAYWZfLQufshE5vhJDBzAEgdO762SkGcV59GDx2VZIyoSek3Y8X8_Z6pVGeDovBQCBstwD7X4ZL4ynMsGb_Szphx2dlcvYPHfY4BFJWGoROPzo8VJ-z5CLseHKg_LXL-PxTHziZFBawMJn5vTodRQVJIU_WA5K408WuNgBh_IhkTj37L-fajwExYoPMWu-YMNlUWD8ta_hnHxLE43QZW5shq09LcTj9VcJdWey1i4q_ftHoZsFngML-kA8KBImeiirtCHs6V1eA3LxJ5a_KojK7aPcA9VgvPH1987I4gqHFedtLZkV5dewYt4HGQ4O3YQ8IsX1Nse0ib2Sw
+            - kty: EC
               use: sig
-              kid: bVdUN2NHUnY1ejRBaEJyYlRMQk1Wd3J3MlZ6bVg3bVZBc0RWMDlTZTJ0NA
+              kid: Nng1Yy1SMmFoRC1VQ2g4NllXSEU1dEtkY0VkX3pweG5RXzdLMjY1WkJNMA
               crv: P-256
-              x: H3tA-P1tw6ckeVyEc46VyYngk6yVmKc2omICbK758Nk
-              y: 9GE4ioGUK6wjnrVJnWAAZNE_YT0Sz915z7PA-VO457w
+              x: yLcidWumqjOPjJI1OcSjgTtqmOfNzC0APWKdRIFik3Y
+              y: 8IkDqyQyLHB10Klvz7vJIb6jrlJ_-HDgMGusR_JzckE
       httpc_params:
         verify: false
       entity_type:
         openid_credential_issuer:
-          class: openid4v.openid_credential_issuer.OpenidCredentialIssuer
+          class: satosa_openid4vci.openid_credential_issuer.OpenidCredentialIssuer
           kwargs:
             config:
               issuer: *base_url
+              client_authn_methods:
+                client_authentication_attestation:
+                  openid4v.openid_credential_issuer.client_authn.ClientAuthenticationAttestation
+                client_secret_basic:
+                  idpyoidc.server.client_authn.ClientSecretBasic
+                client_secret_post:
+                  idpyoidc.server.client_authn.ClientSecretPost
+                dpop_client_auth:
+                  idpyoidc.server.oauth2.add_on.dpop.DPoPClientAuth
               persistence:
-                class: satosa_openid4vci.persistence.openid_provider.OPPersistence
+                class: satosa_idpyop.persistence.openid_provider.OPPersistence
                 kwargs:
                   storage:
-                    class: "satosa_openid4vci.core.storage.file.FilesystemDB"
+                    class: satosa_idpyop.core.storage.file.FilesystemDB
                     kwargs:
-                      fdir: "op_storage"
-                      key_conv: "idpyoidc.util.Base64"
-                      value_conv: "idpyoidc.util.JSON"
+                      fdir: op_storage
+                      key_conv: idpyoidc.util.Base64
+                      value_conv: idpyoidc.util.JSON
               httpc_params:
                 verify: false
                 timeout: 1
-              userinfo:
-                class: openid4v.user_info.UserInfo
-                kwargs:
-                  db_file: users.json
               preference:
-                claims_supported:
-                  - preferred_username
-                scopes_supported:
-                  - profile
-                  - email
                 subject_types_supported:
                   - public
                   - pairwise
@@ -108,57 +107,12 @@ config:
                   '':
                     - given_name
                     - family_name
-                    - birthdate
-                    - place_of_birth
-                    - unique_id
-                    - tax_id_code
+                    - name
+                    - email
+                    - nickname
                 credentials_supported:
-                  - credential_definition:
-                      credentialSubject:
-                        birthdate:
-                          display:
-                            - locale: en-US
-                              name: Date of Birth
-                            - locale: it-IT
-                              name: Data di Nascita
-                          mandatory: true
-                        family_name:
-                          display:
-                            - locale: en-US
-                              name: Current Family Name
-                            - locale: it-IT
-                              name: Cognome
-                          mandatory: true
-                        given_name:
-                          display:
-                            - locale: en-US
-                              name: Current First Name
-                            - locale: it-IT
-                              name: Nome
-                          mandatory: true
-                        place_of_birth:
-                          display:
-                            - locale: en-US
-                              name: Place of Birth
-                            - locale: it-IT
-                              name: Luogo di Nascita
-                          mandatory: true
-                        tax_id_code:
-                          display:
-                            - locale: en-US
-                              name: Tax Id Number
-                            - locale: it-IT
-                              name: Codice Fiscale
-                          mandatory: true
-                        unique_id:
-                          display:
-                            - locale: en-US
-                              name: Unique Identifier
-                            - locale: it-IT
-                              name: Identificativo univoco
-                          mandatory: true
-                      type:
-                        - PersonIdentificationData
+                  - format: vc+sd-jwt
+                    id: eudiw.pid.se
                     cryptographic_binding_methods_supported:
                       - jwk
                     cryptographic_suites_supported:
@@ -167,17 +121,44 @@ config:
                       - ES256
                       - ES512
                     display:
-                      - locale: en-US
-                        name: Swedish PID Provider Example
-                    format: vc+sd-jwt
-                    id: eudiw.pid.se
+                      name: Swedish PID Provider Example
+                      locale: en-US
+                    credential_definition:
+                      type:
+                        - PersonIdentificationData
+                      credentialSubject:
+                        name:
+                          display:
+                            - name: Name of a person
+                              locale: en-US
+                          mandatory: true
+                        family_name:
+                          display:
+                            - locale: en-US
+                              name: Current Family Name
+                          mandatory: true
+                        given_name:
+                          display:
+                            - locale: en-US
+                              name: Current First Name
+                          mandatory: true
+                        email:
+                          display:
+                            - locale: en-US
+                              name: Current email address
+                          mandatory: true
+                        nickname:
+                          mandatory: true
+                          display:
+                            - name: A persons nickname
+                              locale: en-US
               token_handler_args:
                 jwks_def:
                   private_path: private/pid_token_handler_keys.json
                   read_only: false
                   key_defs:
                     - type: oct
-                      bytes: '24'
+                      bytes: 24
                       use:
                         - enc
                       kid: code
@@ -189,14 +170,14 @@ config:
                         iterations: 1
                         keys:
                           key_defs:
-                            - kid: 'password'
-                              type: 'OCT'
+                            - kid: password
+                              type: OCT
                               use:
-                                - 'enc'
-                            - kid: 'salt'
-                              type: 'OCT'
+                                - enc
+                            - kid: salt
+                              type: OCT
                               use:
-                                - 'enc'
+                                - enc
                           private_path: private/pid_crypt_keys.json
                 token:
                   class: idpyoidc.server.token.jwt_token.JWTToken
@@ -213,28 +194,16 @@ config:
                         essential: true
               keys:
                 key_defs:
-                  - type: "RSA"
-                    use: [ "sig" ]
-                  - type: "EC"
-                    crv: "P-256"
-                    use: [ "sig" ]
+                  - type: RSA
+                    use:
+                      - sig
+                  - type: EC
+                    crv: P-256
+                    use:
+                      - sig
                 uri_path: jwks.json
                 private_path: private/pid_oci_keys.json
                 read_only: false
-              client_authn_methods:
-                client_secret_basic: idpyoidc.server.client_authn.ClientSecretBasic
-                client_secret_post: idpyoidc.server.client_authn.ClientSecretPost
-                client_assertion: openid4v.openid_credential_issuer.client_authn.ClientAssertion
-                dpop_client_auth: idpyoidc.server.oauth2.add_on.dpop.DPoPClientAuth
-                client_secret_jwt: idpyoidc.server.client_authn.ClientSecretJWT
-                private_key_jwt: idpyoidc.server.client_authn.PrivateKeyJWT
-                client_authentication_attestation: openid4v.openid_credential_issuer.client_authn.ClientAuthenticationAttestation
-              authentication:
-                anon:
-                  acr: urn:oasis:names:tc:SAML:2.0:ac:classes:InternetProtocolPassword
-                  class: idpyoidc.server.user_authn.user.NoAuthn
-                  kwargs:
-                    user: diana
               endpoint:
                 authorization:
                   path: authorization
@@ -276,13 +245,23 @@ config:
                     iterations: 1
                     keys:
                       key_defs:
-                        - kid: 'password'
-                          type: 'OCT'
+                        - kid: password
+                          type: OCT
                           use:
-                            - 'enc'
-                        - kid: 'salt'
-                          type: 'OCT'
+                            - enc
+                        - kid: salt
+                          type: OCT
                           use:
-                            - 'enc'
-                      private_path: private/pid_session_keys.json
-                      read_only: false
+                            - enc
+              userinfo:
+                class: satosa_idpyop.user_info.ProxyUserInfo
+                kwargs:
+                  credential_type_to_claims:
+                    PersonIdentificationData:
+                      - email
+                      - address.streetaddress
+                      - sub
+                      - name
+                      - family_name
+                      - given_name
+                      - nickname

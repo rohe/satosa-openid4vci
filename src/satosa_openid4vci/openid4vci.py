@@ -9,10 +9,15 @@ from urllib.parse import urlencode
 from urllib.parse import urlparse
 
 import satosa
+from idpyoidc.message import Message
 from idpyoidc.message.oauth2 import AuthorizationErrorResponse
 from idpyoidc.message.oauth2 import ResponseMessage
+from idpyoidc.node import topmost_unit
 from idpyoidc.server.authn_event import create_authn_event
 from satosa.response import SeeOther
+from satosa_idpyop.persistence.federation_entity import FEPersistence
+from satosa_idpyop.persistence.openid_provider import OPPersistence
+from satosa_idpyop.utils import combine_client_subject_id
 from satosa_openid4vci.core import ExtendedContext
 from satosa_openid4vci.core.claims import combine_claim_values
 from satosa_openid4vci.core.response import JsonResponse
@@ -27,7 +32,7 @@ except ImportError:
         pass
 from satosa.frontends.base import FrontendModule
 
-from .core.application import idpy_oidc_application as idpy_oidc_app
+from satosa_idpyop.core.application import idpy_oidc_application as idpy_oidc_app
 
 logger = logging.getLogger(__name__)
 
@@ -48,9 +53,13 @@ class OpenID4VCIFrontend(FrontendModule, Openid4VCIEndpoints):
                  ):
         FrontendModule.__init__(self, auth_req_callback_func, internal_attributes, base_url, name)
         self.app = idpy_oidc_app(conf)
+        self.app.server.frontend_name = name
         Openid4VCIEndpoints.__init__(self, self.app, auth_req_callback_func, self.converter)
         # registered endpoints will be filled by self.register_endpoints
         self.endpoints = None
+        persistence = getattr(self.app.federation_entity, "persistence", None)
+        if persistence:
+            persistence.store_state()
 
     def register_endpoints(self, backend_names):
         """
@@ -68,7 +77,7 @@ class OpenID4VCIFrontend(FrontendModule, Openid4VCIEndpoints):
                 for k, v in item.endpoint.items():
                     url_map.append((f"^{v.endpoint_path}", getattr(self, f"{k}_endpoint")))
 
-        # add jwks.json webpath
+        # add jwks.json web path
         uri_path = self.app.server["openid_credential_issuer"].config["key_conf"]["uri_path"]
         url_map.append((f"^{uri_path}", self.jwks_endpoint))
 
@@ -91,22 +100,34 @@ class OpenID4VCIFrontend(FrontendModule, Openid4VCIEndpoints):
 
         http_info = self.get_http_info(context)
         logger.debug(f"context.state: {context.state.keys()}")
-        orig_req = context.state['authorization']["oidc_request"]
+        orig_req = context.state[self.name]["oidc_request"]
 
         _entity_type = self.app.server["openid_credential_issuer"]
+        if isinstance(orig_req, str):
+            # urlencoded
+            orig_req = Message().from_urlencoded(orig_req)
+
         _entity_type.persistence.restore_state(orig_req, http_info)
         endpoint = _entity_type.get_endpoint("authorization")
         # have to look up the original authorization request in the PAR db
         _ec = endpoint.upstream_get("context")
         _entity_type.persistence.restore_pushed_authorization()
         logger.debug(f"PAR_db: {list(_ec.par_db.keys())}")
-        parse_req = _ec.par_db[orig_req["request_uri"]]
+        parse_req = None
+        if _ec.par_db:
+            _req_uri = orig_req.get("request_uri", "")
+            if _req_uri:
+                parse_req = _ec.par_db.get(_req_uri, None)
         #
+        if not parse_req:
+            parse_req = orig_req
         client_id = parse_req["client_id"]
+
         # sub = internal_resp.subject_id
         logger.info(f"Response attributes = {internal_resp.attributes}")
         # Which attribute/-s to use should be configurable
-        sub = internal_resp.attributes.get("mail")
+        sub = internal_resp.subject_id
+        # sub = internal_resp.attributes.get("mail")
         if sub and isinstance(sub, list):
             sub = sub[0]
         if not sub:
@@ -122,7 +143,9 @@ class OpenID4VCIFrontend(FrontendModule, Openid4VCIEndpoints):
         session_manager = _ec.session_manager
         client_info = _entity_type.persistence.restore_client_info(client_id)
         client_subject_type = client_info.get("subject_type", "public")
+
         scopes = parse_req.get("scopes", [])
+
         _session_id = session_manager.create_session(
             authn_event=authn_event,
             auth_req=parse_req,
@@ -204,10 +227,11 @@ class OpenID4VCIFrontend(FrontendModule, Openid4VCIEndpoints):
         if context.request:
             client_id = context.request.get("client_id")
         if not client_id:
-            oidc_req = context.state["authorization"]["oidc_request"]
+            oidc_req = context.state[self.name]["oidc_request"]
             client_id = oidc_req["client_id"]
 
         _entity_type = self.app.server["openid_credential_issuer"]
-        _entity_type.persistence.store_claims(combined_claims, client_id)
+        client_subject_id = combine_client_subject_id(client_id, internal_resp.subject_id)
+        _entity_type.persistence.store_claims(combined_claims, client_subject_id)
         _entity_type.persistence.store_state(client_id)
         return self.send_response(response)
