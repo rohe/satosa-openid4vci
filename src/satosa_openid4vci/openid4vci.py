@@ -8,19 +8,17 @@ from urllib.parse import parse_qs
 from urllib.parse import urlencode
 from urllib.parse import urlparse
 
-import satosa
 from idpyoidc.message import Message
 from idpyoidc.message.oauth2 import AuthorizationErrorResponse
 from idpyoidc.message.oauth2 import ResponseMessage
-from idpyoidc.node import topmost_unit
 from idpyoidc.server.authn_event import create_authn_event
+import satosa
+from satosa.context import Context
 from satosa.response import SeeOther
-from satosa_idpyop.persistence.federation_entity import FEPersistence
-from satosa_idpyop.persistence.openid_provider import OPPersistence
+from satosa_idpyop.core import ExtendedContext
+from satosa_idpyop.core.claims import combine_claim_values
+from satosa_idpyop.core.response import JsonResponse
 from satosa_idpyop.utils import combine_client_subject_id
-from satosa_openid4vci.core import ExtendedContext
-from satosa_openid4vci.core.claims import combine_claim_values
-from satosa_openid4vci.core.response import JsonResponse
 
 from .endpoints import Openid4VCIEndpoints
 
@@ -61,6 +59,32 @@ class OpenID4VCIFrontend(FrontendModule, Openid4VCIEndpoints):
         if persistence:
             persistence.store_state()
 
+    def oci_jwks_endpoint(self, context: Context):
+        """
+        Construct the JWKS document (served at /jwks).
+        :type context: satosa.context.Context
+        :rtype: oic.utils.http_util.Response
+
+        :param context: the current context
+        :return: HTTP response to the client
+        """
+        logger.debug("At the OCI JWKS endpoint")
+        jwks = self.app.server["openid_credential_issuer"].context.keyjar.export_jwks("")
+        return JsonResponse(jwks)
+
+    def oas_jwks_endpoint(self, context: Context):
+        """
+        Construct the JWKS document (served at /jwks).
+        :type context: satosa.context.Context
+        :rtype: oic.utils.http_util.Response
+
+        :param context: the current context
+        :return: HTTP response to the client
+        """
+        logger.debug("At the OAS JWKS endpoint")
+        jwks = self.app.server["oauth_authorization_server"].context.keyjar.export_jwks("")
+        return JsonResponse(jwks)
+
     def register_endpoints(self, backend_names):
         """
         See super class satosa.frontends.base.FrontendModule
@@ -78,8 +102,10 @@ class OpenID4VCIFrontend(FrontendModule, Openid4VCIEndpoints):
                     url_map.append((f"^{v.endpoint_path}", getattr(self, f"{k}_endpoint")))
 
         # add jwks.json web path
+        uri_path = self.app.server["oauth_authorization_server"].config["key_conf"]["uri_path"]
+        url_map.append((f"^{uri_path}", self.oas_jwks_endpoint))
         uri_path = self.app.server["openid_credential_issuer"].config["key_conf"]["uri_path"]
-        url_map.append((f"^{uri_path}", self.jwks_endpoint))
+        url_map.append((f"^{uri_path}", self.oci_jwks_endpoint))
 
         logger.debug(f"Loaded Credential Issuer endpoints: {url_map}")
         self.endpoints = url_map
@@ -102,7 +128,8 @@ class OpenID4VCIFrontend(FrontendModule, Openid4VCIEndpoints):
         logger.debug(f"context.state: {context.state.keys()}")
         orig_req = context.state[self.name]["oidc_request"]
 
-        _entity_type = self.app.server["openid_credential_issuer"]
+        # _entity_type = self.app.server["openid_credential_issuer"]
+        _entity_type = self.app.server["oauth_authorization_server"]
         if isinstance(orig_req, str):
             # urlencoded
             orig_req = Message().from_urlencoded(orig_req)
@@ -137,7 +164,8 @@ class OpenID4VCIFrontend(FrontendModule, Openid4VCIEndpoints):
             uid=sub,
             salt=base64.b64encode(os.urandom(self.app.salt_size)).decode(),
             authn_info=internal_resp.auth_info.auth_class_ref,
-            # TODO: authn_time=datetime.fromisoformat(internal_resp.auth_info.timestamp).timestamp(),
+            # TODO: authn_time=datetime.fromisoformat(
+            #  internal_resp.auth_info.timestamp).timestamp(),
         )
 
         session_manager = _ec.session_manager
@@ -182,12 +210,13 @@ class OpenID4VCIFrontend(FrontendModule, Openid4VCIEndpoints):
             response = JsonResponse(rargs.to_json(), status="403")
             return self.send_response(response)
 
-        kwargs= {
+        kwargs = {
             "fragment_enc": _args.get("fragment_enc", None),
             "return_uri": _args.get("return_uri")
         }
 
-        info = endpoint.do_response(response_args=_args.get("response_args"), request=parse_req, **kwargs)
+        info = endpoint.do_response(response_args=_args.get("response_args"), request=parse_req,
+                                    **kwargs)
 
         logger.debug(f"Response from OCI: {info}")
 
@@ -230,7 +259,7 @@ class OpenID4VCIFrontend(FrontendModule, Openid4VCIEndpoints):
             oidc_req = context.state[self.name]["oidc_request"]
             client_id = oidc_req["client_id"]
 
-        _entity_type = self.app.server["openid_credential_issuer"]
+        _entity_type = self.app.server["oauth_authorization_server"]
         client_subject_id = combine_client_subject_id(client_id, internal_resp.subject_id)
         _entity_type.persistence.store_claims(combined_claims, client_subject_id)
         _entity_type.persistence.store_state(client_id)

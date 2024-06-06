@@ -155,7 +155,7 @@ def federation_setup():
     trust_anchor.server.subordinate[WP_ID] = {
         "jwks": wallet_provider['federation_entity'].keyjar.export_jwks(),
         'authority_hints': [TA_ID],
-        "registration_info": {"entity_types": ["federation_entity", "wallet_provider"]},
+        "registration_info": {"entity_types": list(wallet_provider.keys())},
     }
     entity["wallet_provider"] = wallet_provider
 
@@ -182,7 +182,7 @@ def federation_setup():
     trust_anchor.server.subordinate[PID_ID] = {
         "jwks": pid['federation_entity'].keyjar.export_jwks(),
         'authority_hints': [TA_ID],
-        "registration_info": {"entity_types": ["federation_entity", "openid_credential_issuer"]},
+        "registration_info": {"entity_types": list(pid.keys())},
     }
     entity["pid_issuer"] = pid
 
@@ -209,7 +209,7 @@ def federation_setup():
     trust_anchor.server.subordinate[QEAA_ID] = {
         "jwks": qeaa['federation_entity'].keyjar.export_jwks(),
         'authority_hints': [TA_ID],
-        "registration_info": {"entity_types": ["federation_entity", "openid_credential_issuer"]},
+        "registration_info": {"entity_types": list(qeaa.keys())}
     }
     entity["qeaa_issuer"] = qeaa
 

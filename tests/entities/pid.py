@@ -11,8 +11,11 @@ from idpyoidc.server.client_authn import ClientSecretBasic
 from idpyoidc.server.client_authn import ClientSecretPost
 from idpyoidc.server.oauth2.add_on.dpop import DPoPClientAuth
 from idpyoidc.server.user_info import UserInfo
+from openid4v import ServerEntity
 from openid4v.openid_credential_issuer import OpenidCredentialIssuer
 from openid4v.openid_credential_issuer.client_authn import ClientAuthenticationAttestation
+
+from tests import CRYPT_CONFIG
 
 SESSION_PARAMS = {
     "encrypter": {
@@ -49,17 +52,53 @@ def main(entity_id: str,
         endpoints=LEAF_ENDPOINTS,
         trust_anchors=trust_anchors,
         entity_type={
-            "openid_credential_issuer": {
-                'class': OpenidCredentialIssuer,
+            "oauth_authorization_server": {
+                'class': ServerEntity,
                 'kwargs': {
                     'config': {
-                        "client_authn_methods": {
-                            "client_secret_basic": ClientSecretBasic,
-                            "client_secret_post": ClientSecretPost,
-                            "client_assertion": ClientAuthenticationAttestation,
-                            "dpop_client_auth": DPoPClientAuth
+                        "httpc_params": {"verify": False, "timeout": 1},
+                        "preference": {
+                            "grant_types_supported": [
+                                "authorization_code",
+                                "implicit",
+                                "urn:ietf:params:oauth:grant-type:jwt-bearer",
+                                "refresh_token",
+                            ],
                         },
-                        "keys": {"key_defs": DEFAULT_KEY_DEFS},
+                        "server_type": "oauth2",
+                        "token_handler_args": {
+                            "jwks_def": {
+                                "private_path": "private/token_jwks.json",
+                                "read_only": False,
+                                "key_defs": [
+                                    {"type": "oct", "bytes": "24", "use": ["enc"],
+                                     "kid": "code"}],
+                            },
+                            "code": {"lifetime": 600, "kwargs": {"crypt_conf": CRYPT_CONFIG}},
+                            "token": {
+                                "class": "idpyoidc.server.token.jwt_token.JWTToken",
+                                "kwargs": {
+                                    "lifetime": 3600,
+                                    "add_claims_by_scope": True,
+                                },
+                            },
+                            "refresh": {
+                                "class": "idpyoidc.server.token.jwt_token.JWTToken",
+                                "kwargs": {
+                                    "lifetime": 3600,
+                                },
+                            },
+                            "id_token": {
+                                "class": "idpyoidc.server.token.id_token.IDToken",
+                                "kwargs": {
+                                    "base_claims": {
+                                        "email": {"essential": True},
+                                        "email_verified": {"essential": True},
+                                    }
+                                },
+                            },
+                        },
+                        "keys": {"key_defs": DEFAULT_KEY_DEFS, "uri_path": "static/oa_jwks.json"},
                         "endpoint": {
                             "token": {
                                 "path": "token",
@@ -82,25 +121,6 @@ def main(entity_id: str,
                                     # "client_authn_method": ["client_assertion"]
                                 },
                             },
-                            "credential": {
-                                "path": "credential",
-                                "class": "openid4v.openid_credential_issuer.credential.Credential",
-                                "kwargs": {
-                                    "client_authn_method": [
-                                        "dpop_client_auth"
-                                    ]
-                                },
-                            },
-                            "pushed_authorization": {
-                                "path": "pushed_authorization",
-                                "class":
-                                    "idpyoidc.server.oauth2.pushed_authorization.PushedAuthorization",
-                                "kwargs": {
-                                    "client_authn_method": [
-                                        "client_assertion",
-                                    ]
-                                },
-                            },
                         },
                         "add_ons": {
                             "pkce": {
@@ -115,114 +135,7 @@ def main(entity_id: str,
                                 }
                             }
                         },
-                        'preference': {
-                            "credentials_supported": [
-                                {
-                                    "format": "vc+sd-jwt",
-                                    "id": "eudiw.pid.se",
-                                    "cryptographic_binding_methods_supported": ["jwk"],
-                                    "cryptographic_suites_supported": ["RS256", "RS512", "ES256",
-                                                                       "ES512"],
-                                    "display": [
-                                        {
-                                            "name": "Example Swedish PID Provider",
-                                            "locale": "en-US",
-                                        }
-                                    ],
-                                    "credential_definition": {
-                                        "type": ["PersonIdentificationData"],
-                                        "credentialSubject": {
-                                            "given_name": {
-                                                "mandatory": True,
-                                                "display": [
-                                                    {
-                                                        "name": "Current First Name",
-                                                        "locale": "en-US"
-                                                    },
-                                                    {
-                                                        "name": "Nome",
-                                                        "locale": "it-IT"
-                                                    }
-                                                ]
-                                            },
-                                            "family_name": {
-                                                "mandatory": True,
-                                                "display": [
-                                                    {
-                                                        "name": "Current Family Name",
-                                                        "locale": "en-US"
-                                                    },
-                                                    {
-                                                        "name": "Cognome",
-                                                        "locale": "it-IT"
-                                                    }
-                                                ]
-                                            },
-                                            "birthdate": {
-                                                "mandatory": True,
-                                                "display": [
-                                                    {
-                                                        "name": "Date of Birth",
-                                                        "locale": "en-US"
-                                                    },
-                                                    {
-                                                        "name": "Data di Nascita",
-                                                        "locale": "it-IT"
-                                                    }
-                                                ]
-                                            },
-                                            "place_of_birth": {
-                                                "mandatory": True,
-                                                "display": [
-                                                    {
-                                                        "name": "Place of Birth",
-                                                        "locale": "en-US"
-                                                    },
-                                                    {
-                                                        "name": "Luogo di Nascita",
-                                                        "locale": "it-IT"
-                                                    }
-                                                ]
-                                            },
-                                            "unique_id": {
-                                                "mandatory": True,
-                                                "display": [
-                                                    {
-                                                        "name": "Unique Identifier",
-                                                        "locale": "en-US"
-                                                    },
-                                                    {
-                                                        "name": "Identificativo univoco",
-                                                        "locale": "it-IT"
-                                                    }
-                                                ]
-                                            },
-                                            "tax_id_code": {
-                                                "mandatory": True,
-                                                "display": [
-                                                    {
-                                                        "name": "Tax Id Number",
-                                                        "locale": "en-US"
-                                                    },
-                                                    {
-                                                        "name": "Codice Fiscale",
-                                                        "locale": "it-IT"
-                                                    }
-                                                ]
-                                            }
-                                        }
-                                    }
-                                }
-                            ],
-                            "attribute_disclosure": {
-                                "": ["given_name",
-                                     "family_name",
-                                     "birthdate",
-                                     "place_of_birth",
-                                     "unique_id",
-                                     "tax_id_code"]
-                            },
-                        },
+                        "template_dir": "template",
                         "authentication": {
                             "anon": {
                                 "acr": "http://www.swamid.se/policy/assurance/al1",
@@ -258,6 +171,133 @@ def main(entity_id: str,
                             },
                         },
                         "session_params": SESSION_PARAMS,
+                    }
+                }
+            },
+            "openid_credential_issuer": {
+                'class': OpenidCredentialIssuer,
+                'kwargs': {
+                    'config': {
+                        "client_authn_methods": {
+                            "client_secret_basic": ClientSecretBasic,
+                            "client_secret_post": ClientSecretPost,
+                            "client_assertion": ClientAuthenticationAttestation,
+                            "dpop_client_auth": DPoPClientAuth
+                        },
+                        "keys": {"key_defs": DEFAULT_KEY_DEFS},
+                        "endpoint": {
+                            "credential": {
+                                "path": "credential",
+                                "class": "openid4v.openid_credential_issuer.credential.Credential",
+                                "kwargs": {
+                                    "client_authn_method": [
+                                        "dpop_client_auth"
+                                    ]
+                                },
+                            },
+                            "pushed_authorization": {
+                                "path": "pushed_authorization",
+                                "class":
+                                    "idpyoidc.server.oauth2.pushed_authorization.PushedAuthorization",
+                                "kwargs": {
+                                    "client_authn_method": [
+                                        "client_assertion",
+                                    ]
+                                },
+                            },
+                        },
+                        "add_ons": {
+                            "dpop": {
+                                "function": "idpyoidc.server.oauth2.add_on.dpop.add_support",
+                                "kwargs": {
+                                    'dpop_signing_alg_values_supported': ["ES256"]
+                                }
+                            }
+                        },
+                        'preference': {
+                            "credentials_supported": [
+                                {
+                                    "format": "vc+sd-jwt",
+                                    "id": "eudiw.pid.se",
+                                    "cryptographic_binding_methods_supported": ["jwk"],
+                                    "cryptographic_suites_supported": ["RS256", "RS512", "ES256",
+                                                                       "ES512"],
+                                    "display": [
+                                        {
+                                            "name": "Example Swedish PID Provider",
+                                            "locale": "en-US",
+                                        }
+                                    ],
+                                    "credential_definition": {
+                                        "type": ["PersonIdentificationData"],
+                                        "credentialSubject": {
+                                            "given_name": {
+                                                "mandatory": True,
+                                                "display": [
+                                                    {
+                                                        "name": "Current First Name",
+                                                        "locale": "en-US"
+                                                    }
+                                                ]
+                                            },
+                                            "family_name": {
+                                                "mandatory": True,
+                                                "display": [
+                                                    {
+                                                        "name": "Current Family Name",
+                                                        "locale": "en-US"
+                                                    },
+                                                ]
+                                            },
+                                            "birthdate": {
+                                                "mandatory": True,
+                                                "display": [
+                                                    {
+                                                        "name": "Date of Birth",
+                                                        "locale": "en-US"
+                                                    },
+                                                ]
+                                            },
+                                            "place_of_birth": {
+                                                "mandatory": True,
+                                                "display": [
+                                                    {
+                                                        "name": "Place of Birth",
+                                                        "locale": "en-US"
+                                                    },
+                                                ]
+                                            },
+                                            "unique_id": {
+                                                "mandatory": True,
+                                                "display": [
+                                                    {
+                                                        "name": "Unique Identifier",
+                                                        "locale": "en-US"
+                                                    },
+                                                ]
+                                            },
+                                            "tax_id_code": {
+                                                "mandatory": True,
+                                                "display": [
+                                                    {
+                                                        "name": "Tax Id Number",
+                                                        "locale": "en-US"
+                                                    },
+                                                ]
+                                            }
+                                        }
+                                    }
+                                }
+                            ],
+                            "attribute_disclosure": {
+                                "": ["given_name",
+                                     "family_name",
+                                     "birthdate",
+                                     "place_of_birth",
+                                     "unique_id",
+                                     "tax_id_code"]
+                            },
+                        },
                     }
                 }
             }

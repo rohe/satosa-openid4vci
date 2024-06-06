@@ -4,7 +4,7 @@ import json
 from fedservice.combo import FederationCombo
 from fedservice.utils import make_federation_combo
 from idpyoidc.util import load_config_file
-from satosa_openid4vci.setup_utils import load_values_from_file
+from satosa_idpyop.setup_utils import load_values_from_file
 
 ENTITY = json.loads(open("entities.json", 'r').read())
 

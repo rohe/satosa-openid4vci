@@ -3,22 +3,24 @@ import os
 import re
 from urllib.parse import parse_qs
 
-import pytest
-import responses
+from fedservice.entity.utils import get_federation_entity
 from idpyoidc.message import Message
 from idpyoidc.message.oauth2 import AuthorizationRequest
 from idpyoidc.server.user_authn.authn_context import PASSWORD
 from idpyoidc.util import load_yaml_config
 from idpyoidc.util import rndstr
 from openid4v.client.client_authn import ClientAuthenticationAttestation
+import pytest
+import responses
 from satosa.attribute_mapping import AttributeMapper
 from satosa.frontends.base import FrontendModule
-from satosa.internal import AuthenticationInformation, InternalData
+from satosa.internal import AuthenticationInformation
+from satosa.internal import InternalData
 from satosa.response import SeeOther
 from satosa.state import State
 from satosa_idpyop.core import ExtendedContext
-from satosa_openid4vci.openid4vci import OpenID4VCIFrontend
 
+from satosa_openid4vci.openid4vci import OpenID4VCIFrontend
 from tests import create_trust_chain_messages
 from tests import federation_setup
 from tests import wallet_setup
@@ -68,7 +70,8 @@ class TestFrontEnd():
     def frontend(self):
         frontend_config = load_yaml_config(full_path("satosa_conf.yaml"))
         _jwks = self.entity["trust_anchor"].keyjar.export_jwks()
-        frontend_config["op"]["server_info"]["trust_anchors"] = {self.entity["trust_anchor"].entity_id: _jwks}
+        frontend_config["op"]["server_info"]["trust_anchors"] = {
+            self.entity["trust_anchor"].entity_id: _jwks}
 
         frontend = OpenID4VCIFrontend(auth_req_callback_func, INTERNAL_ATTRIBUTES,
                                       frontend_config, BASE_URL, "OIDC")
@@ -105,15 +108,16 @@ class TestFrontEnd():
             if re.match(pattern, endpoint_path):
                 return instance
 
-    def setup_for_authn_response(self, context: ExtendedContext, frontend: FrontendModule, auth_req: Message):
+    def setup_for_authn_response(self, context: ExtendedContext, frontend: FrontendModule,
+                                 auth_req: Message):
         context.state[frontend.name] = {"oidc_request": auth_req.to_urlencoded()}
 
         auth_info = AuthenticationInformation(
             PASSWORD, "2015-09-30T12:21:37Z", "unittest_idp.xml"
         )
         internal_response = InternalData(auth_info=auth_info)
-        internal_response.attributes = AttributeMapper(frontend.internal_attributes).to_internal("saml",
-                                                                                                 USERS["diana"])
+        internal_response.attributes = AttributeMapper(
+            frontend.internal_attributes).to_internal("saml", USERS["diana"])
         internal_response.subject_id = "diana"
 
         return internal_response
@@ -140,7 +144,8 @@ class TestFrontEnd():
 
         _service = actor.get_service("authorization")
         _service.certificate_issuer_id = audience
-        qeaa_issuer = self.entity["qeaa_issuer"].entity_id
+        qeaa_issuer = frontend.app.server.entity_id
+        # qeaa_issuer = self.entity["qeaa_issuer"].entity_id
 
         _cls = ClientAuthenticationAttestation()
         _cls.construct(
@@ -177,7 +182,8 @@ class TestFrontEnd():
         # _pa_response = endpoint.process_request(_parsed_req)
         assert _pa_response
 
-        internal_response = self.setup_for_authn_response(context, frontend, AuthorizationRequest(**authz_request))
+        internal_response = self.setup_for_authn_response(context, frontend,
+                                                          AuthorizationRequest(**authz_request))
         _auth_response = frontend.handle_authn_response(context, internal_response)
 
         assert isinstance(_auth_response, SeeOther)
@@ -186,7 +192,8 @@ class TestFrontEnd():
         # _auth_response = endpoint.process_request(_auth_request)
         return authz_request, _part
 
-    def _token_flow(self, client_id, authz_response, state, authz_request, actor, frontend, context, **kwargs):
+    def _token_flow(self, client_id, authz_response, state, authz_request, actor, frontend, context,
+                    **kwargs):
         token_request = {
             'grant_type': 'authorization_code',
             'code': authz_response["code"][0],
@@ -217,7 +224,7 @@ class TestFrontEnd():
         context.request = req_info["request"]
         context.request_method = req_info["method"]
         context.request_uri = req_info["url"]
-        context.http_info = {"headers": req_info["headers"]}
+        context.http_info = req_info["headers"]
 
         _token_response = endpoint(context)
         # _parsed_req = endpoint.parse_request(request=req_info["request"], http_info=_http_info)
@@ -234,6 +241,9 @@ class TestFrontEnd():
             "access_token": token_response["access_token"]
         }
         _service = actor.get_service("credential")
+        _federation_entity = get_federation_entity(actor)
+        _metadata = _federation_entity.trust_chain["https://qeaa.example.org"][0].metadata
+        kwargs["htu"] = _metadata['openid_credential_issuer']["credential_endpoint"]
         cred_req_info = _service.get_request_parameters(qeaa_request, **kwargs)
 
         assert cred_req_info
@@ -286,18 +296,22 @@ class TestFrontEnd():
                          adding_headers={"Content-Type": "application/json"}, status=200)
 
             # collect metadata for QEEA issuer
-            qeaa_issuer_metadata = self.wallet["federation_entity"].get_verified_metadata(qeaa_issuer)
+            qeaa_issuer_metadata = self.wallet["federation_entity"].get_verified_metadata(
+                qeaa_issuer)
 
-        actor.context.provider_info = qeaa_issuer_metadata['openid_credential_issuer']
+        actor.context.provider_info = qeaa_issuer_metadata['oauth_authorization_server']
 
-        _authz_request, _auth_response = self._authz_flow(client_id, srv, wia, qeaa_issuer, actor, frontend=frontend,
+        _authz_request, _auth_response = self._authz_flow(client_id, srv, wia, qeaa_issuer, actor,
+                                                          frontend=frontend,
                                                           context=context)
         assert _auth_response
 
         #  token endpoint
-        _token_response = self._token_flow(client_id, _auth_response, _authz_request["state"], _authz_request, actor,
+        _token_response = self._token_flow(client_id, _auth_response, _authz_request["state"],
+                                           _authz_request, actor,
                                            frontend, context)
 
         _credential_response = self._credential_flow(json.loads(_token_response.message), actor,
-                                                     state=_authz_request["state"], frontend=frontend, context=context)
+                                                     state=_authz_request["state"],
+                                                     frontend=frontend, context=context)
         assert _credential_response

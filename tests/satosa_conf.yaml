@@ -34,6 +34,180 @@ op:
         keys:
           none
     entity_type:
+      oauth_authorization_server:
+        class: openid4v.ServerEntity
+        kwargs:
+          config:
+            client_authn_methods:
+              client_secret_jwt: idpyoidc.server.client_authn.ClientSecretJWT
+              private_key_jwt: idpyoidc.server.client_authn.PrivateKeyJWT
+              client_secret_basic: idpyoidc.server.client_authn.ClientSecretBasic,
+              client_secret_post: idpyoidc.server.client_authn.ClientSecretPost,
+              client_assertion: openid4v.openid_credential_issuer.client_authn.ClientAuthenticationAttestation
+              dpop_client_auth: idpyoidc.server.oauth2.add_on.dpop.DPoPClientAuth
+            httpc_params:
+              verify: false
+              timeout: 1
+            persistence:
+              class: satosa_idpyop.persistence.openid_provider.OPPersistence
+              kwargs:
+                storage:
+                  class: satosa_idpyop.core.storage.file.FilesystemDB
+                  kwargs:
+                    fdir: op_storage
+                    key_conv: idpyoidc.util.Base64
+                    value_conv: idpyoidc.util.JSON
+            preference:
+              grant_types_supported:
+                - authorization_code
+                - implicit
+                - urn:ietf:params:oauth:grant-type:jwt-bearer
+                - refresh_token
+            server_type: oauth2
+            token_handler_args:
+              jwks_def:
+                private_path: private/token_jwks.json
+                read_only: false
+                key_defs:
+                  -
+                    type: oct
+                    bytes: 24
+                    use:
+                      - enc
+                    kid: code
+              code:
+                lifetime: 600
+                kwargs:
+                  crypt_conf:
+                    kwargs:
+                      keys:
+                        key_defs:
+                          -
+                            type: OCT
+                            use:
+                              - enc
+                            kid: password
+                          -
+                            type: OCT
+                            use:
+                              - enc
+                            kid: salt
+                      iterations: 1
+              token:
+                class: idpyoidc.server.token.jwt_token.JWTToken
+                kwargs:
+                  lifetime: 3600
+                  add_claims_by_scope: true
+              refresh:
+                class: idpyoidc.server.token.jwt_token.JWTToken
+                kwargs:
+                  lifetime: 3600
+              id_token:
+                class: idpyoidc.server.token.id_token.IDToken
+                kwargs:
+                  base_claims:
+                    email:
+                      essential: true
+                    email_verified:
+                      essential: true
+            keys:
+              key_defs:
+                -
+                  type: RSA
+                  use:
+                    - sig
+                -
+                  type: EC
+                  crv: P-256
+                  use:
+                    - sig
+              uri_path: oa_jwks.json
+              private_path: static/oa_jwks.json
+            endpoint:
+              token:
+                path: token
+                class: openid4v.openid_credential_issuer.access_token.Token
+                kwargs:
+                  client_authn_method:
+                    - client_assertion
+              authorization:
+                path: authorization
+                class:
+                  openid4v.openid_credential_issuer.authorization.Authorization
+                kwargs:
+                  client_authn_method:
+                    - client_assertion
+                  response_types_supported:
+                    - code
+                  response_modes_supported:
+                    - query
+                    - form_post
+                  request_parameter_supported: true
+                  request_uri_parameter_supported: true
+            add_ons:
+              pkce:
+                function: idpyoidc.server.oauth2.add_on.pkce.add_support
+                kwargs:
+                  code_challenge_length: 64
+                  code_challenge_method: S256
+              dpop:
+                function: idpyoidc.server.oauth2.add_on.dpop.add_support
+                kwargs:
+                  dpop_signing_alg_values_supported:
+                    - ES256
+            template_dir: template
+            authentication:
+              anon:
+                acr: http://www.swamid.se/policy/assurance/al1
+                class: idpyoidc.server.user_authn.user.NoAuthn
+                kwargs:
+                  user: diana
+            authz:
+              class: idpyoidc.server.authz.AuthzHandling
+              kwargs:
+                grant_config:
+                  usage_rules:
+                    authorization_code:
+                      supports_minting:
+                        - access_token
+                        - refresh_token
+                        - id_token
+                      max_usage: 1
+                    access_token: { }
+                    refresh_token:
+                      supports_minting:
+                        - access_token
+                        - refresh_token
+                        - id_token
+                  expires_in: 43200
+            session_params:
+              encrypter:
+                kwargs:
+                  iterations: 1
+                  keys:
+                    key_defs:
+                      -
+                        kid: password
+                        type: OCT
+                        use:
+                          - enc
+                      -
+                        kid: salt
+                        type: OCT
+                        use:
+                          - enc
+            userinfo:
+              class: satosa_idpyop.user_info.ProxyUserInfo
+              kwargs:
+                credential_type_to_claims:
+                  PersonIdentificationData:
+                    - email
+                    - address.streetaddress
+                    - sub
+                    - name
+                    - family_name
+                    - given_name
+                    - nickname
       openid_credential_issuer:
         class: satosa_openid4vci.openid_credential_issuer.OpenidCredentialIssuer
         kwargs:
@@ -48,6 +222,12 @@ op:
                 idpyoidc.server.client_authn.ClientSecretPost
               dpop_client_auth:
                 idpyoidc.server.oauth2.add_on.dpop.DPoPClientAuth
+            add_ons:
+              dpop:
+                function: idpyoidc.server.oauth2.add_on.dpop.add_support
+                kwargs:
+                  dpop_signing_alg_values_supported:
+                    - ES256
             persistence:
               class: satosa_idpyop.persistence.openid_provider.OPPersistence
               kwargs:
@@ -57,19 +237,22 @@ op:
                     fdir: op_storage
                     key_conv: idpyoidc.util.Base64
                     value_conv: idpyoidc.util.JSON
+            userinfo:
+              class: satosa_idpyop.user_info.ProxyUserInfo
+              kwargs:
+                credential_type_to_claims:
+                  PersonIdentificationData:
+                    - email
+                    - address.streetaddress
+                    - sub
+                    - name
+                    - family_name
+                    - given_name
+                    - nickname
             httpc_params:
               verify: false
               timeout: 1
             preference:
-              subject_types_supported:
-                - public
-                - pairwise
-                - ephemeral
-              grant_types_supported:
-                - authorization_code
-                - implicit
-                - urn:ietf:params:oauth:grant-type:jwt-bearer
-                - refresh_token
               attribute_disclosure:
                 "":
                   - given_name
@@ -119,47 +302,6 @@ op:
                         display:
                           - name: A persons nickname
                             locale: en-US
-            token_handler_args:
-              jwks_def:
-                private_path: private/token_jwks.json
-                read_only: false
-                key_defs:
-                  - type: oct
-                    bytes: 24
-                    use:
-                      - enc
-                    kid: code
-              code:
-                lifetime: 600
-                kwargs:
-                  crypt_conf:
-                    kwargs:
-                      iterations: 1
-                      keys:
-                        key_defs:
-                          - kid: password
-                            type: OCT
-                            use:
-                              - enc
-                          - kid: salt
-                            type: OCT
-                            use:
-                              - enc
-              token:
-                class: idpyoidc.server.token.jwt_token.JWTToken
-                kwargs:
-                  lifetime: 3600
-                  add_claims_by_scope: true
-                  aud:
-                    - https://example.org/appl
-              id_token:
-                class: idpyoidc.server.token.id_token.IDToken
-                kwargs:
-                  base_claims:
-                    email:
-                      essential: true
-                    email_verified:
-                      essential: true
             keys:
               key_defs:
                 - type: RSA
@@ -169,67 +311,15 @@ op:
                   crv: P-256
                   use:
                     - sig
-              uri_path: jwks.json
-              public_path: static/jwks.json
+              uri_path: oci_jwks.json
+              private_path: static/oci_jwks.json
               read_only: false
             endpoint:
-              authorization:
-                path: authorization
-                class: openid4v.openid_credential_issuer.authorization.Authorization
-                kwargs:
-                  response_modes_supported:
-                    - query
-                    - fragment
-                    - form_post
-                  claim_types_supported:
-                    - normal
-                    - aggregated
-                    - distributed
-                  claims_parameter_supported: true
-                  request_parameter_supported: true
-                  request_uri_parameter_supported: true
-              token:
-                path: token
-                class: openid4v.openid_credential_issuer.access_token.Token
-                kwargs:
-                  client_authn_method:
-                    - client_authentication_attestation
               credential:
                 path: credential
                 class: openid4v.openid_credential_issuer.credential.Credential
                 kwargs:
                   client_authn_method:
                     - dpop_client_auth
-              pushed_authorization:
-                path: pushed_authorization
-                class: idpyoidc.server.oauth2.pushed_authorization.PushedAuthorization
-                kwargs:
-                  client_authn_method:
-                    - client_authentication_attestation
             template_dir: template
-            session_params:
-              encrypter:
-                kwargs:
-                  iterations: 1
-                  keys:
-                    key_defs:
-                      - kid: password
-                        type: OCT
-                        use:
-                          - enc
-                      - kid: salt
-                        type: OCT
-                        use:
-                          - enc
-            userinfo:
-              class: satosa_idpyop.user_info.ProxyUserInfo
-              kwargs:
-                credential_type_to_claims:
-                  PersonIdentificationData:
-                    - email
-                    - address.streetaddress
-                    - sub
-                    - name
-                    - family_name
-                    - given_name
-                    - nickname
+

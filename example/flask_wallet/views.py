@@ -312,7 +312,7 @@ def token():
     resp = consumer.do_request(
         "accesstoken",
         request_args=_request_args,
-        endpoint=trust_chain.metadata['openid_credential_issuer']['token_endpoint'],
+        endpoint=trust_chain.metadata['oauth_authorization_server']['token_endpoint'],
         state=session["state"],
         **_args
     )
