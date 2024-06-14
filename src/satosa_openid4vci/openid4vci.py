@@ -85,7 +85,7 @@ class OpenID4VCIFrontend(FrontendModule, Openid4VCIEndpoints):
         jwks = self.app.server["oauth_authorization_server"].context.keyjar.export_jwks("")
         return JsonResponse(jwks)
 
-    def register_endpoints(self, backend_names):
+    def register_endpoints(self, *kwargs):
         """
         See super class satosa.frontends.base.FrontendModule
         :type backend_names: list[str]

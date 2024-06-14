@@ -155,6 +155,8 @@ op:
                 kwargs:
                   dpop_signing_alg_values_supported:
                     - ES256
+                  dpop_endpoints:
+                    - token
             template_dir: template
             authentication:
               anon:
@@ -228,6 +230,8 @@ op:
                 kwargs:
                   dpop_signing_alg_values_supported:
                     - ES256
+                  dpop_endpoints:
+                    - credential
             persistence:
               class: satosa_idpyop.persistence.openid_provider.OPPersistence
               kwargs:

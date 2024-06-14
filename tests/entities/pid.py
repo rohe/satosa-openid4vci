@@ -131,7 +131,8 @@ def main(entity_id: str,
                             "dpop": {
                                 "function": "idpyoidc.server.oauth2.add_on.dpop.add_support",
                                 "kwargs": {
-                                    'dpop_signing_alg_values_supported': ["ES256"]
+                                    'dpop_signing_alg_values_supported': ["ES256"],
+                                    "dpop_endpoints": ["token"]
                                 }
                             }
                         },
@@ -210,7 +211,8 @@ def main(entity_id: str,
                             "dpop": {
                                 "function": "idpyoidc.server.oauth2.add_on.dpop.add_support",
                                 "kwargs": {
-                                    'dpop_signing_alg_values_supported': ["ES256"]
+                                    'dpop_signing_alg_values_supported': ["ES256"],
+                                    "dpop_endpoints": ["credential"]
                                 }
                             }
                         },

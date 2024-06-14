@@ -76,8 +76,7 @@ class TestFrontEnd():
         frontend = OpenID4VCIFrontend(auth_req_callback_func, INTERNAL_ATTRIBUTES,
                                       frontend_config, BASE_URL, "OIDC")
 
-        frontend.register_endpoints(["entity_configuration", "authorization", "token",
-                                     "pushed_authorization", "credential"])
+        frontend.register_endpoints()
         return frontend
 
     @pytest.fixture

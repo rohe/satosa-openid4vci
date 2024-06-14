@@ -70,7 +70,8 @@ You should do this by creating a file with something like this inside::
       "https://127.0.0.1:8080": {
         "entity_types": [
           "federation_entity",
-          "openid_credential_issuer"
+          "openid_credential_issuer",
+          "oauth_authorization_server"
         ],
         "jwks": {
           "keys": [
@@ -95,7 +96,7 @@ You should do this by creating a file with something like this inside::
     }
 
 If you start the credential issuer once it will create its keys and place copies of them in certain files.
-The file you have to look for is **public/pid_fed_keys.json**. In it you should have the needed information.
+The file you have to look for is **public/fed_keys.json**. In it you should have the needed information.
 Now copy this file over to the setup_federation site and run (assumed that *ci.json* is the name of the file)::
 
     ./add_info.py -s ci.json -t trust_anchor/subordinates

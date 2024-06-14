@@ -1,6 +1,5 @@
 import json
 import logging
-from urllib.parse import parse_qs
 
 import werkzeug
 from cryptojwt import JWT
@@ -224,23 +223,21 @@ def authz():
         "client_id": _thumbprint,
         "redirect_uri": _redirect_uri,
     }
+
+    _metadata = current_app.federation_entity.get_verified_metadata(pid_issuer)
     kwargs = {
         "state": rndstr(24),
         "behaviour_args": {
+            'pushed_authorization_request_endpoint': _metadata["oauth_authorization_server"][
+                'pushed_authorization_request_endpoint'],
             "wallet_instance_attestation": wallet_entity.context.wallet_instance_attestation[_thumbprint]["attestation"]
         }
     }
+
     session["state"] = kwargs["state"]
 
     _service = actor.get_service("authorization")
     _service.certificate_issuer_id = pid_issuer
-
-    # par_req_info = get_request_parameters(
-    #     request_args, service=_service,
-    #     wallet_instance_attestation=wallet_entity.context.wallet_instance_attestation[_thumbprint]["attestation"],
-    #     state=kwargs["state"]
-    # )
-    # session["par_req"] = {k:v[0] for k,v in parse_qs(par_req_info["body"]).items()}
 
     req_info = _service.get_request_parameters(request_args, **kwargs)
 
@@ -271,7 +268,7 @@ def authz_cb(issuer):
     _consumer.finalize_auth(request.args)
     session["issuer"] = issuer
     return render_template('authorization.html',
-                           #par_request=session["par_req"],
+                           # par_request=session["par_req"],
                            auth_req_uri=session["auth_req_uri"],
                            response=request.args.to_dict())
 
@@ -279,8 +276,7 @@ def authz_cb(issuer):
 @entity.route('/token')
 def token():
     consumer = get_consumer(session["issuer"])
-    _req_args = consumer.context.cstate.get_set(session["state"], claim=["redirect_uri", "code",
-                                                                         "nonce"])
+    _req_args = consumer.context.cstate.get_set(session["state"], claim=["redirect_uri", "code", "nonce"])
     trust_chains = get_verified_trust_chains(consumer, consumer.context.issuer)
     trust_chain = trust_chains[0]
     _thumbprint = session["thumbprint_in_cnf_jwk"]
@@ -307,12 +303,14 @@ def token():
     }
 
     _service = consumer.get_service("accesstoken")
+    _metadata = current_app.federation_entity.get_verified_metadata(consumer.context.issuer)
+    _args["endpoint"] = _metadata['oauth_authorization_server']['token_endpoint']
     req_info = _service.get_request_parameters(_request_args, **_args)
 
     resp = consumer.do_request(
         "accesstoken",
         request_args=_request_args,
-        endpoint=trust_chain.metadata['oauth_authorization_server']['token_endpoint'],
+#        endpoint=trust_chain.metadata['oauth_authorization_server']['token_endpoint'],
         state=session["state"],
         **_args
     )

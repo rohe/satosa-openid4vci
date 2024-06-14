@@ -37,6 +37,9 @@ config:
             crv: P-256
             use:
               - sig
+        private_path: private/fed_keys.json
+        public_path: public/fed_keys.json
+        read_only: false
       preference:
         organization_name: The OP operator
         contacts: operations@op.example.com
@@ -154,8 +157,9 @@ config:
                     crv: P-256
                     use:
                       - sig
-                uri_path: oa_jwks.json
-                private_path: static/oa_jwks.json
+                uri_path: jwks/oauth_authorization_server
+                private_path: private/oa_jwks.json
+                read_only: false
               endpoint:
                 token:
                   path: token
@@ -168,8 +172,6 @@ config:
                   class:
                     openid4v.openid_credential_issuer.authorization.Authorization
                   kwargs:
-                    client_authn_method:
-                      - client_assertion
                     response_types_supported:
                       - code
                     response_modes_supported:
@@ -177,6 +179,12 @@ config:
                       - form_post
                     request_parameter_supported: true
                     request_uri_parameter_supported: true
+                pushed_authorization:
+                  path: pushed_authorization
+                  class: idpyoidc.server.oauth2.pushed_authorization.PushedAuthorization
+                  kwargs:
+                    client_authn_method:
+                      - client_assertion
               add_ons:
                 pkce:
                   function: idpyoidc.server.oauth2.add_on.pkce.add_support
@@ -188,6 +196,8 @@ config:
                   kwargs:
                     dpop_signing_alg_values_supported:
                       - ES256
+                    dpop_endpoints:
+                      - token
               template_dir: template
               authentication:
                 anon:
@@ -261,6 +271,8 @@ config:
                   kwargs:
                     dpop_signing_alg_values_supported:
                       - ES256
+                    dpop_endpoints:
+                      - credential
               persistence:
                 class: satosa_idpyop.persistence.openid_provider.OPPersistence
                 kwargs:
@@ -352,8 +364,8 @@ config:
                     crv: P-256
                     use:
                       - sig
-                uri_path: oci_jwks.json
-                private_path: static/oci_jwks.json
+                uri_path: jwks/openid_credential_issuer
+                private_path: private/oci_jwks.json
                 read_only: false
               endpoint:
                 credential:

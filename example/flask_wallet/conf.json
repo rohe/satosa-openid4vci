@@ -178,6 +178,6 @@
     "cert_chain": null,
     "port": 5005,
     "domain": "127.0.0.1",
-    "debug": true
+    "debug": false
   }
 }
