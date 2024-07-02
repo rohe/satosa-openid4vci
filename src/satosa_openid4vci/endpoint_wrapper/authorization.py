@@ -14,8 +14,8 @@ from idpyoidc.node import topmost_unit
 from idpyoidc.server import Endpoint
 from idpyoidc.server.authn_event import create_authn_event
 from openid4v.message import AuthorizationRequest
-from satosa_idpyop.core import ExtendedContext
-from satosa_idpyop.core.claims import combine_claim_values
+from satosa_idpy.core import ExtendedContext
+from satosa_idpy.core.claims import combine_claim_values
 from satosa_idpyop.core.response import JsonResponse
 from satosa_idpyop.endpoint_wrapper import EndPointWrapper, get_http_info
 
