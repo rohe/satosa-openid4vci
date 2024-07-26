@@ -144,15 +144,38 @@ def send_js(path):
     return send_from_directory('static', path)
 
 
+@entity.route('/wp_fed_keys.json')
+def send_wp_fed_jwks(path):
+    # federation entity keys
+    _jwks = current_app.federation_entity.keyjar.export_jwks_as_json()
+    return _jwks
+
+@entity.route('/jwks.json')
+def send_wp_jwks(path):
+    # federation entity keys
+    _jwks = current_app.server["wallet_provider"]["wallet_provider"].keyjar.export_jwks_as_json()
+    return _jwks
+
+@entity.route('/dis_jwks.json')
+def send_dis_jwks(path):
+    # federation entity keys
+    _jwks = current_app.server["wallet_provider"]["device_integrity_service"].keyjar.export_jwks_as_json()
+    return _jwks
+
 @entity.route('/token', methods=['GET', 'POST'])
 def token():
     _endpoint = current_app.server["wallet_provider"].get_endpoint('wallet_provider_token')
     return service_endpoint(_endpoint)
 
 
-@entity.route('/app_attestation', methods=['GET'])
+@entity.route('/integrity', methods=['GET'])
 def app_attestation():
-    _endpoint = current_app.server["wallet_provider"].get_endpoint('app_attestation')
+    _endpoint = current_app.server["wallet_provider"].get_endpoint('integrity')
+    return service_endpoint(_endpoint)
+
+@entity.route('/key_attestation', methods=['GET'])
+def app_attestation():
+    _endpoint = current_app.server["wallet_provider"].get_endpoint('key_attestation')
     return service_endpoint(_endpoint)
 
 @entity.errorhandler(werkzeug.exceptions.BadRequest)

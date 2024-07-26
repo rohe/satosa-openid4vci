@@ -104,8 +104,8 @@ class OpenID4VCIFrontend(FrontendModule, Openid4VCIEndpoints):
         # add jwks.json web path
         uri_path = self.app.server["oauth_authorization_server"].config["key_conf"]["uri_path"]
         url_map.append((f"^{uri_path}", self.oas_jwks_endpoint))
-        uri_path = self.app.server["openid_credential_issuer"].config["key_conf"]["uri_path"]
-        url_map.append((f"^{uri_path}", self.oci_jwks_endpoint))
+        # uri_path = self.app.server["openid_credential_issuer"].config["key_conf"]["uri_path"]
+        # url_map.append((f"^{uri_path}", self.oci_jwks_endpoint))
 
         logger.debug(f"Loaded Credential Issuer endpoints: {url_map}")
         self.endpoints = url_map
