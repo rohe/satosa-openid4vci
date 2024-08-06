@@ -46,7 +46,7 @@ config:
       authority_hints:
         - https://127.0.0.1:7003
       trust_marks:
-        - eyJhbGciOiJSUzI1NiIsImtpZCI6IlMycDFiek5GWjNGa09IVnBPV1JsTUVWNGFGWm9SVVZGU0hnelR6ZEVWbEJXVFVvemVqQkRVWGgwT0EifQ.eyJpYXQiOiAxNzE2NDUwMzgwLCAiaWQiOiAiaHR0cDovL2RjNGV1LmV4YW1wbGUuY29tL1BlcnNvbklkZW50aWZpY2F0aW9uRGF0YS9zZSIsICJzdWIiOiAiaHR0cHM6Ly8xMjcuMC4wLjE6ODA4MCIsICJleHAiOiAxNzE5MDQyMzgwLCAiaXNzIjogImh0dHBzOi8vMTI3LjAuMC4xOjYwMDAifQ.dQJ7cxUhYAgNbjBfUaSns4HgJjcvfc82pAsSLZswMRSyDqoxzU9XbMpmwuOn-RLhXVR1vQu-lP6hEUJanxdNLXZrf7LrRlVZ5FsDb3vYSuDSaGV335rAbFR4PTGY-tQ4raMbtFolskYfbDoXPBqT6N6mLrdsQyhBwd5QbY-1vr-mEhZIvzdxiAI4ERA6jUfapl8ASSE_V4MbD9VnMtwbq7p9CQC33Pui-7GiPX_hFifj6ioh10Ufb-ESzr3dzQ-WFJCpmK2Ans_Q05zAxxW8dOxk4Uohf-OWnvaOXZ6Et9o1QiXG1b1auiu_tIBXDogdphjCWGK7TgHgWJVAuVyS6A
+        - eyJhbGciOiJSUzI1NiIsImtpZCI6IlMycDFiek5GWjNGa09IVnBPV1JsTUVWNGFGWm9SVVZGU0hnelR6ZEVWbEJXVFVvemVqQkRVWGgwT0EifQ.eyJpYXQiOiAxNzIxNzIyNTMzLCAiaWQiOiAiaHR0cDovL2RjNGV1LmV4YW1wbGUuY29tL1BlcnNvbklkZW50aWZpY2F0aW9uRGF0YS9zZSIsICJzdWIiOiAiaHR0cHM6Ly8xMjcuMC4wLjE6ODA4MCIsICJleHAiOiAxNzI0MzE0NTMzLCAiaXNzIjogImh0dHBzOi8vMTI3LjAuMC4xOjYwMDAifQ.DIBBcujBH0j7mftuz6ExULLauZzHHK2OnRH3O3VFdnuOon8UMRTtRYb96LEZj0CMVv3NmUm9xItWd-PU1S-mTPZDllWpho9VxXAb-dBJzM07FvLe2vAZySnbME80TY5B7ZZp-bz5d9zmqPViJhEtYfYfG39EbR7baWsW9tnU5jFTxHKA-HW0djAyu1SrdRpRbiPZEfkYQZmKToEtrQCTSi9q43sfrqrm8jcsSFAuvbIDSQZxYhbSOqgqfCZYoFEOnatAFX-YnJq3vDue-KlJXsIP5Wkra7Uv29KTtVLVfeC5lww-ANKg72JOR2aBTZRl9YGlVZIK5VipeQteFqxWew
       endpoints:
         entity_configuration:
           path: ".well-known/openid-federation"
@@ -69,6 +69,7 @@ config:
               y: 8IkDqyQyLHB10Klvz7vJIb6jrlJ_-HDgMGusR_JzckE
       httpc_params:
         verify: false
+        timeout: 14
       entity_type:
         oauth_authorization_server:
           class: openid4v.ServerEntity
@@ -83,7 +84,7 @@ config:
                 dpop_client_auth: idpyoidc.server.oauth2.add_on.dpop.DPoPClientAuth
               httpc_params:
                 verify: false
-                timeout: 1
+                timeout: 12
               persistence:
                 class: satosa_idpyop.persistence.openid_provider.OPPersistence
                 kwargs:
@@ -179,12 +180,6 @@ config:
                       - form_post
                     request_parameter_supported: true
                     request_uri_parameter_supported: true
-                pushed_authorization:
-                  path: pushed_authorization
-                  class: idpyoidc.server.oauth2.pushed_authorization.PushedAuthorization
-                  kwargs:
-                    client_authn_method:
-                      - client_assertion
               add_ons:
                 pkce:
                   function: idpyoidc.server.oauth2.add_on.pkce.add_support
@@ -296,7 +291,7 @@ config:
                       - nickname
               httpc_params:
                 verify: false
-                timeout: 1
+                timeout: 11
               preference:
                 attribute_disclosure:
                   "":
@@ -305,7 +300,7 @@ config:
                     - name
                     - email
                     - nickname
-                credentials_supported:
+                credential_configurations_supported:
                   -
                     format: vc+sd-jwt
                     id: eudiw.pid.se
@@ -364,7 +359,6 @@ config:
                     crv: P-256
                     use:
                       - sig
-                uri_path: jwks/openid_credential_issuer
                 private_path: private/oci_jwks.json
                 read_only: false
               endpoint:

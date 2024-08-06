@@ -6,24 +6,9 @@
 </head>
 <body>
 <h1>1:3. Wallet Instance Attestation</h1>
-<h3  style="color: blue">The Attestation Request: </h3>
-<dl>
-    {% for key, value in req_info.items() %}
-    <dt>{{ key }}</dt>
-    <dd>{{ value }}</dd>
-    {% endfor %}
-</dl>
-<br>
 <h3>The Assertion in the request (unpacked): </h3>
 <dl>
-    {% for key, value in req_assertion.items() %}
-    <dt>{{ key }}</dt>
-    <dd>{{ value }}</dd>
-    {% endfor %}
-</dl>
-<h3>JWT headers</h3>
-<dl>
-    {% for key, value in request_headers.items() %}
+    {% for key, value in request_args.items() %}
     <dt>{{ key }}</dt>
     <dd>{{ value }}</dd>
     {% endfor %}
@@ -48,7 +33,7 @@
 
 <hr>
 <input type="button" onclick="location.href='picking_pid_issuer'"
-       value="2. Find PID Issuer"/>
+       value="3. Find PID Issuer"/>
 
 </body>
 </html>
