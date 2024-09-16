@@ -21,6 +21,7 @@ class OpenidCredentialIssuer(openid4v.openid_credential_issuer.OpenidCredentialI
             httpc: Optional[Any] = None,
             httpc_params: Optional[dict] = None,
             entity_id: Optional[str] = "",
+            entity_type: Optional[str] = "",
             key_conf: Optional[dict] = None
     ):
         openid4v.openid_credential_issuer.OpenidCredentialIssuer.__init__(
@@ -34,6 +35,7 @@ class OpenidCredentialIssuer(openid4v.openid_credential_issuer.OpenidCredentialI
             httpc_params=httpc_params,
             entity_id=entity_id,
             key_conf=key_conf,
+            entity_type=entity_type
             )
 
         persistence_conf = config.get("persistence")

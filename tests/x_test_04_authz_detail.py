@@ -265,7 +265,9 @@ class TestFrontEnd():
 
         # The WIA request by the Wallet
         srv = self.wallet["wallet"].get_service("wallet_instance_attestation")
-        req = srv.construct(request_args={"aud": wallet_provider.entity_id, "nonce": "NONCE"})
+        ephemeral_key = self.wallet["wallet"].mint_new_key()
+        req = srv.construct(request_args={"aud": wallet_provider.entity_id, "nonce": "NONCE"},
+                            ephemeral_key=ephemeral_key)
         assert req["assertion"]
         # Now get the wallet provider to sign
 

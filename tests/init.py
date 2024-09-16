@@ -1,20 +1,9 @@
-import json
 import os
 import shutil
 
-from cryptojwt.utils import b64e
 from cryptojwt.utils import importer
 from fedservice.entity import FederationEntity
 from fedservice.entity.utils import get_federation_entity
-
-from idpyoidc.client.defaults import CC_METHOD
-
-BASEDIR = os.path.abspath(os.path.dirname(__file__))
-
-
-def full_path(local_file):
-    return os.path.join(BASEDIR, local_file)
-
 
 CRYPT_CONFIG = {
     "kwargs": {
@@ -29,46 +18,6 @@ CRYPT_CONFIG = {
 }
 
 SESSION_PARAMS = {"encrypter": CRYPT_CONFIG}
-
-
-def _import(val):
-    path = val[len("file:"):]
-    if os.path.isfile(path) is False:
-        return None
-
-    with open(path, "r") as fp:
-        _dat = fp.read()
-        if val.endswith('.json'):
-            return json.loads(_dat)
-        elif val.endswith(".py"):
-            return _dat
-
-    raise ValueError("Unknown file type")
-
-
-def load_values_from_file(config):
-    res = {}
-    for key, val in config.items():
-        if isinstance(val, str) and val.startswith("file:"):
-            res[key] = _import(val)
-        elif isinstance(val, dict):
-            res[key] = load_values_from_file(val)
-        elif isinstance(val, list):
-            _list = []
-            for v in val:
-                if isinstance(v, dict):
-                    _list.append(load_values_from_file(v))
-                elif isinstance(val, str) and val.startswith("file:"):
-                    res[key] = _import(val)
-                else:
-                    _list.append(v)
-            res[key] = _list
-
-    for k, v in res.items():
-        config[k] = v
-
-    return config
-
 
 RESPONSE_TYPES_SUPPORTED = [
     ["code"],
@@ -161,7 +110,7 @@ def federation_setup():
     TA_ID = "https://ta.example.org"
     WP_ID = "https://wp.example.org"
     PID_ID = "https://pid.example.org"
-    # QEAA_ID = "https://qeaa.example.org"
+    QEAA_ID = "https://qeaa.example.org"
     entity = {}
 
     ##################
@@ -237,6 +186,33 @@ def federation_setup():
     }
     entity["pid_issuer"] = pid
 
+    #########################################
+    # OpenidCredentialIssuer - SWAMID version
+    #########################################
+
+    kwargs = {
+        "entity_id": QEAA_ID,
+        "preference": {
+            "organization_name": "The SWAMID Credential Issuer",
+            "homepage_uri": "https://qeaa.example.com",
+            "contacts": "operations@qeaa.example.com"
+        },
+        "authority_hints": [TA_ID],
+        "trust_anchors": trust_anchors
+    }
+
+    try:
+        qeaa = execute_function('entities.cid.main', **kwargs)
+    except ModuleNotFoundError:
+        qeaa = execute_function('tests.entities.cid.main', **kwargs)
+
+    trust_anchor.server.subordinate[QEAA_ID] = {
+        "jwks": qeaa['federation_entity'].keyjar.export_jwks(),
+        'authority_hints': [TA_ID],
+        "registration_info": {"entity_types": list(qeaa.keys())}
+    }
+    entity["qeaa_issuer"] = qeaa
+
     return entity
 
 
@@ -268,14 +244,16 @@ def wallet_setup(federation):
     return wallet
 
 
+BASEDIR = os.path.abspath(os.path.dirname(__file__))
+
+
+def full_path(local_file):
+    return os.path.join(BASEDIR, local_file)
+
+
 def clear_folder(folder):
     for root, dirs, files in os.walk(f'{full_path(folder)}'):
         for f in files:
             os.unlink(os.path.join(root, f))
         for d in dirs:
             shutil.rmtree(os.path.join(root, d))
-
-def hash_func(value):
-    _hash_method = CC_METHOD["S256"]
-    _hv = _hash_method(value.encode()).digest()
-    return b64e(_hv).decode("ascii")
