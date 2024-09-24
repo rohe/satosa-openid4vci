@@ -6,7 +6,6 @@ from cryptojwt.utils import b64e
 from cryptojwt.utils import importer
 from fedservice.entity import FederationEntity
 from fedservice.entity.utils import get_federation_entity
-
 from idpyoidc.client.defaults import CC_METHOD
 
 BASEDIR = os.path.abspath(os.path.dirname(__file__))
@@ -29,6 +28,10 @@ CRYPT_CONFIG = {
 }
 
 SESSION_PARAMS = {"encrypter": CRYPT_CONFIG}
+
+
+def auth_req_callback_func(c, x):
+    return x
 
 
 def _import(val):
@@ -274,6 +277,7 @@ def clear_folder(folder):
             os.unlink(os.path.join(root, f))
         for d in dirs:
             shutil.rmtree(os.path.join(root, d))
+
 
 def hash_func(value):
     _hash_method = CC_METHOD["S256"]

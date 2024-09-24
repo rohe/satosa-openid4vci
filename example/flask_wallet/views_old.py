@@ -1,9 +1,13 @@
+import base64
+import hashlib
+import json
 import logging
 
 import werkzeug
 from cryptojwt import JWT
 from cryptojwt.jwk.ec import new_ec_key
-from cryptojwt.utils import b64e, as_unicode
+from cryptojwt.jws.dsa import ECDSASigner
+from cryptojwt.utils import b64e, as_unicode, as_bytes
 from fedservice.entity import get_verified_trust_chains
 from flask import Blueprint
 from flask import current_app
@@ -53,58 +57,52 @@ def send_image(path):
     return send_from_directory('img', path)
 
 
-@entity.route('/wir_challenge', methods=['GET'])
+@entity.route('/challenge', methods=['GET'])
 def challenge1():
     wallet_entity = current_app.server["wallet"]
     wallet_provider_id = session["wallet_provider_id"]
 
     _challenge = wallet_entity.request_challenge(wallet_provider_id)
 
-    wallet_entity.context.crypto_hardware_key = new_ec_key('P-256')
+    session["challenge_1"] = _challenge
 
-    session["challenge_wir"] = _challenge
-
-    return render_template('wir_challenge.html', challenge_response=_challenge)
+    return render_template('challenge.html', challenge_response=_challenge)
 
 
-@entity.route('/wai_challenge', methods=['GET'])
+@entity.route('/challenge2', methods=['GET'])
 def challenge2():
     wallet_entity = current_app.server["wallet"]
     wallet_provider_id = session["wallet_provider_id"]
 
     _challenge = wallet_entity.request_challenge(wallet_provider_id)
 
-    session["challenge_wai"] = _challenge
+    session["challenge_2"] = _challenge
 
-    return render_template('wai_challenge.html', challenge_response=_challenge)
+    return render_template('challenge2.html', challenge_response=_challenge)
 
 
-@entity.route('/key_attestation', methods=['GET'])
+@entity.route('/attest_key', methods=['GET'])
 def attest_key():
     wallet_entity = current_app.server["wallet"]
     wallet_provider_id = session["wallet_provider_id"]
-    challenge = session["challenge_wir"]
+    challenge = session["challenge_1"]
 
-    crypto_hardware_key_tag = wallet_entity.context.crypto_hardware_key.kid
+    resp = wallet_entity.request_key_attestation(wallet_provider_id, session["challenge_1"])
 
     request_args = {
         "challenge": challenge,
-        # "crypto_hardware_key_tag": crypto_hardware_key_tag,
-        "crypto_hardware_key": wallet_entity.context.crypto_hardware_key.serialize()
+        "crypto_hardware_key_tag": wallet_entity.context.init_reg[challenge]["crypto_hardware_key_tag"]
     }
 
-    resp = wallet_entity.request_key_attestation(wallet_provider_id, challenge)
-
     return render_template('key_attestation.html', key_attestation_response=resp,
-                           key_attestation_request=request_args,
-                           crypto_hardware_key_tag=crypto_hardware_key_tag)
+                           key_attestation_request=request_args)
 
 
-@entity.route('/wallet_registration', methods=['GET'])
+@entity.route('/registration', methods=['GET'])
 def registration():
     wallet_entity = current_app.server["wallet"]
     wallet_provider_id = session["wallet_provider_id"]
-    challenge = session["challenge_wir"]
+    challenge = session["challenge_1"]
 
     resp = wallet_entity.request_registration(wallet_provider_id, challenge)
 
@@ -116,7 +114,7 @@ def registration():
         "hardware_key_tag": _init_reg_info["crypto_hardware_key_tag"]
     }
 
-    return render_template('wallet_registration.html', registration_response=resp,
+    return render_template('registration.html', registration_response=resp,
                            registration_request=request_args)
 
 
@@ -139,45 +137,30 @@ def integrity():
     # And where the response is unpacked.
     wallet_entity = current_app.server["wallet"]
     wallet_provider_id = session["wallet_provider_id"]
-    challenge = session["challenge_wai"]
+    challenge = session["challenge_1"]
 
-    resp, ephemeral_key, hardware_signature = wallet_entity.request_integrity_assertion(wallet_provider_id, challenge)
+    resp, ephemeral_key = wallet_entity.request_integrity_assertion(wallet_provider_id, challenge)
     session["ephemeral_key_tag"] = ephemeral_key.kid
-    wallet_entity.context.wia_flow[ephemeral_key.kid]["integrity_assertion"] = resp["integrity_assertion"]
-    wallet_entity.context.wia_flow[ephemeral_key.kid]["hardware_signature"] = hardware_signature
 
     return render_template('integrity.html', integrity_response=resp)
 
 
-@entity.route('/wallet_attestation_issuance')
-def wai():
-    return render_template('wallet_attestation_issuance.html')
-
-
-@entity.route('/wallet_instance_request')
-def wir():
+@entity.route('/wallet_instance_attestation')
+def wallet_instance_attestation():
     # This is where the attestation request is constructed and sent to the Wallet Provider.
     # And where the response is unpacked.
     wallet_entity = current_app.server["wallet"]
     wallet_provider_id = session["wallet_provider_id"]
-    challenge = session["challenge_wai"]
-    _wia_info = wallet_entity.context.wia_flow[session["ephemeral_key_tag"]]
-    integrity_assertion = _wia_info["integrity_assertion"]
-    hardware_signature = _wia_info["hardware_signature"]
-    hardware_key_tag = wallet_entity.context.crypto_hardware_key.kid
+    challenge = session["challenge_1"]
 
     wallet_instance_attestation, war_payload = wallet_entity.request_wallet_instance_attestation(
-        wallet_provider_id, challenge, session["ephemeral_key_tag"],
-        integrity_assertion=integrity_assertion,
-        hardware_signature=hardware_signature,
-        crypto_hardware_key_tag=hardware_key_tag
+        wallet_provider_id, challenge, session["ephemeral_key_tag"]
     )
-
     _jwt = JWT(key_jar=wallet_entity.keyjar)
     _jwt.msg_cls = WalletInstanceAttestationJWT
-    _ass = _jwt.unpack(token=wallet_instance_attestation["assertion"])
+    _ass = _jwt.unpack(token=wallet_instance_attestation)
 
-    return render_template('wallet_instance_attestation_request.html',
+    return render_template('wallet_instance_attestation.html',
                            request_args=war_payload,
                            wallet_instance_attestation=_ass,
                            response_headers=_ass.jws_header)

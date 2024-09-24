@@ -1,61 +1,10 @@
 import os
 
 from cryptojwt.utils import importer
+from fedservice.entity import FederationEntity
 from idpyoidc.server.util import execute
 
-from fedservice.entity import FederationEntity
-
 BASEDIR = os.path.abspath(os.path.dirname(__file__))
-
-# TA_ID = "https://ta.example.org"
-# WP_ID = "https://wp.example.org"
-# TMI_ID = "https://tmi.example.org"
-# WALLET_ID = "I_am_the_wallet"
-#
-# FEDERATION_CONFIG = {
-#     TA_ID: {
-#         "entity_type": "trust_anchor",
-#         "subordinates": [WP_ID, TMI_ID],
-#         "kwargs": {
-#             "preference": {
-#                 "organization_name": "The example federation operator",
-#                 "homepage_uri": "https://ta.example.org",
-#                 "contacts": "operations@ta.example.org"
-#             },
-#             "endpoints": ['entity_configuration', 'list', 'fetch', 'resolve'],
-#         }
-#     },
-#     WP_ID: {
-#         "entity_type": "wallet_provider",
-#         "trust_anchors": [TA_ID],
-#         "kwargs": {
-#             "authority_hints": [TA_ID],
-#             "preference": {
-#                 "organization_name": "The Wallet Provider",
-#                 "homepage_uri": "https://wp.example.com",
-#                 "contacts": "operations@wp.example.com"
-#             }
-#         }
-#     },
-#     TMI_ID: {
-#         "entity_type": "wallet_provider",
-#         "trust_anchors": [TA_ID],
-#         "kwargs": {
-#             "authority_hints": [TA_ID],
-#             "preference": {
-#                 "organization_name": "The Wallet Provider",
-#                 "homepage_uri": "https://wp.example.com",
-#                 "contacts": "operations@wp.example.com"
-#             }
-#         }
-#     },
-#     WALLET_ID: {
-#         "entity_type": "wallet",
-#         "trust_anchors": [TA_ID],
-#         "kwargs": {}
-#     }
-# }
-
 
 
 def execute_function(function, **kwargs):

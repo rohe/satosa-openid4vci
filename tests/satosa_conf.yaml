@@ -69,8 +69,7 @@ op:
                 private_path: private/token_jwks.json
                 read_only: false
                 key_defs:
-                  -
-                    type: oct
+                  - type: oct
                     bytes: 24
                     use:
                       - enc
@@ -82,13 +81,11 @@ op:
                     kwargs:
                       keys:
                         key_defs:
-                          -
-                            type: OCT
+                          - type: OCT
                             use:
                               - enc
                             kid: password
-                          -
-                            type: OCT
+                          - type: OCT
                             use:
                               - enc
                             kid: salt
@@ -112,12 +109,10 @@ op:
                       essential: true
             keys:
               key_defs:
-                -
-                  type: RSA
+                - type: RSA
                   use:
                     - sig
-                -
-                  type: EC
+                - type: EC
                   crv: P-256
                   use:
                     - sig
@@ -188,13 +183,11 @@ op:
                   iterations: 1
                   keys:
                     key_defs:
-                      -
-                        kid: password
+                      - kid: password
                         type: OCT
                         use:
                           - enc
-                      -
-                        kid: salt
+                      - kid: salt
                         type: OCT
                         use:
                           - enc
@@ -264,48 +257,50 @@ op:
                   - name
                   - email
                   - nickname
-              credentials_supported:
-                - format: vc+sd-jwt
-                  id: eudiw.pid.se
+              credential_configurations_supported:
+                Geant_CID_example:
+                  format: "vc+sd-jwt"
+                  scope: Geant_CID_example
+                  vct: https://edugain.com
                   cryptographic_binding_methods_supported:
                     - jwk
-                  cryptographic_suites_supported:
-                    - RS256
-                    - RS512
+                  credential_signing_alg_values_supported":
                     - ES256
-                    - ES512
-                  display:
-                    name: Swedish PID Provider Example
-                    locale: en-US
+                  claims:
+                    given_name: { }
+                    family_name: { }
+                    email: { }
+                    phone_number: { }
                   credential_definition:
+                    "@context":
+                      - https://www.w3.org/2018/credentials/v1
+                      - https://example.com/edugain
                     type:
-                      - PersonIdentificationData
+                      - VerifiableCredential
+                      - PersonalInfo
                     credentialSubject:
-                      name:
-                        display:
-                          - name: Name of a person
-                            locale: en-US
-                        mandatory: true
-                      family_name:
-                        display:
-                          - locale: en-US
-                            name: Current Family Name
-                        mandatory: true
-                      given_name:
-                        display:
-                          - locale: en-US
-                            name: Current First Name
-                        mandatory: true
-                      email:
-                        display:
-                          - locale: en-US
-                            name: Current email address
-                        mandatory: true
-                      nickname:
-                        mandatory: true
-                        display:
-                          - name: A persons nickname
-                            locale: en-US
+                      given_name: { }
+                      family_name: { }
+                      email: { }
+                      phoine_numer: { }
+                UniversityDegree_LDP_VC:
+                  format: ldp_vc
+                  cryptographic_binding_methods_supported:
+                    - jwk
+                  credential_signing_alg_values_supported":
+                    - ES256
+                  credential_definition:
+                    "@context":
+                      - https://www.w3.org/2018/credentials/v1
+                      - https://example.com/edugain
+                    type:
+                      - VerifiableCredential
+                      - PersonalInfo
+                    credentialSubject:
+                      given_name: { }
+                      family_name: { }
+                      degree: { }
+                      gpa: { }
             keys:
               key_defs:
                 - type: RSA

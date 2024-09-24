@@ -114,7 +114,7 @@ class Openid4VCIUtils(object):
             response = JsonResponse(
                 {
                     "error": "invalid_request",
-                    "error_description": "request cannot be processed",
+                    "error_description": f"request can not be processed {err}",
                 },
                 status="403",
             )

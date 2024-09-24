@@ -22,7 +22,8 @@ class OpenidCredentialIssuer(openid4v.openid_credential_issuer.OpenidCredentialI
             httpc_params: Optional[dict] = None,
             entity_id: Optional[str] = "",
             entity_type: Optional[str] = "",
-            key_conf: Optional[dict] = None
+            key_conf: Optional[dict] = None,
+            **kwargs
     ):
         openid4v.openid_credential_issuer.OpenidCredentialIssuer.__init__(
             self,

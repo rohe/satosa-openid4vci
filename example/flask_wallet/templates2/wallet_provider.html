@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Wallet Provider Information</title>
+</head>
+<body>
+<h1>1.1 Wallet Provider Information</h1>
+<h2>Wallet initialization and registration</h2>
+<h3>Used the trust layer (OpenID Federation) to gather information</h3>
+<h3>Trust Chain Path from the Wallet provider to the Trust Anchor: {{ trust_chain_path }}</h3>
+<h3>Wallet Provider Metadata</h3>
+<dl>
+    {% for key, value in metadata.items() %}
+    <dt>{{ key }}</dt>
+    <dd>{{ value }}</dd>
+    {% endfor %}
+</dl>
+
+<hr>
+<input type="button" onclick="location.href='wir_challenge'"
+       value="1:2 Get Challenge"/>
+
+</body>
+</html>

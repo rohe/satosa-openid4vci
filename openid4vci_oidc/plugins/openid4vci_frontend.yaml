@@ -46,7 +46,7 @@ config:
       authority_hints:
         - https://127.0.0.1:7003
       trust_marks:
-        - eyJhbGciOiJSUzI1NiIsImtpZCI6IlMycDFiek5GWjNGa09IVnBPV1JsTUVWNGFGWm9SVVZGU0hnelR6ZEVWbEJXVFVvemVqQkRVWGgwT0EifQ.eyJpYXQiOiAxNzIxNzIyNTMzLCAiaWQiOiAiaHR0cDovL2RjNGV1LmV4YW1wbGUuY29tL1BlcnNvbklkZW50aWZpY2F0aW9uRGF0YS9zZSIsICJzdWIiOiAiaHR0cHM6Ly8xMjcuMC4wLjE6ODA4MCIsICJleHAiOiAxNzI0MzE0NTMzLCAiaXNzIjogImh0dHBzOi8vMTI3LjAuMC4xOjYwMDAifQ.DIBBcujBH0j7mftuz6ExULLauZzHHK2OnRH3O3VFdnuOon8UMRTtRYb96LEZj0CMVv3NmUm9xItWd-PU1S-mTPZDllWpho9VxXAb-dBJzM07FvLe2vAZySnbME80TY5B7ZZp-bz5d9zmqPViJhEtYfYfG39EbR7baWsW9tnU5jFTxHKA-HW0djAyu1SrdRpRbiPZEfkYQZmKToEtrQCTSi9q43sfrqrm8jcsSFAuvbIDSQZxYhbSOqgqfCZYoFEOnatAFX-YnJq3vDue-KlJXsIP5Wkra7Uv29KTtVLVfeC5lww-ANKg72JOR2aBTZRl9YGlVZIK5VipeQteFqxWew
+        - eyJhbGciOiJSUzI1NiIsImtpZCI6IlMycDFiek5GWjNGa09IVnBPV1JsTUVWNGFGWm9SVVZGU0hnelR6ZEVWbEJXVFVvemVqQkRVWGgwT0EifQ.eyJpYXQiOiAxNzI3MTY1NDYzLCAiaWQiOiAiaHR0cDovL2RjNGV1LmV4YW1wbGUuY29tL1BlcnNvbklkZW50aWZpY2F0aW9uRGF0YS9zZSIsICJzdWIiOiAiaHR0cHM6Ly8xMjcuMC4wLjE6ODA4MCIsICJleHAiOiAxNzI5NzU3NDYzLCAiaXNzIjogImh0dHBzOi8vMTI3LjAuMC4xOjYwMDAifQ.OrFIg8crAYveCIHI4JQrXIJzyY3vWtbbilrrkGuctVm2bTRwPlb22qmgJPOCAnYwhi1eyWvWdVN2oHw-5lA3cO6nVrfCxp_wYdhLmqF_p2vMT4x5ei06eR56j4hirkVwYAA45pmCesrKRbP8mV_GTvrwScIKLRc4Q6HHkxoZT9BS1L8jjnSTHqNHICeKZpj76To8uAcAC_bksd956in11wi8DfBjzFPc5JxKtVFc8MeNEEVspIckz62UFYejCaQp7X7_wghynvcthF4jjEyaufcSS37HgvpiKeArj416exV07Jt9ZiOLDelNWwnoE-8CBfdEjNylRfaevmkqdTJa0g
       endpoints:
         entity_configuration:
           path: ".well-known/openid-federation"
@@ -54,19 +54,17 @@ config:
       trust_anchors:
         https://127.0.0.1:7003:
           keys:
-            -
-              kty: RSA
-              use: sig
-              kid: ZXFYbDlqWkNzaWd1eDNseTVfWFBNUWRFX3lrQ2Y3b2owaWVMTjNhcnpBMA
-              e: AQAB
-              n: qHE53SwNAYWZfLQufshE5vhJDBzAEgdO762SkGcV59GDx2VZIyoSek3Y8X8_Z6pVGeDovBQCBstwD7X4ZL4ynMsGb_Szphx2dlcvYPHfY4BFJWGoROPzo8VJ-z5CLseHKg_LXL-PxTHziZFBawMJn5vTodRQVJIU_WA5K408WuNgBh_IhkTj37L-fajwExYoPMWu-YMNlUWD8ta_hnHxLE43QZW5shq09LcTj9VcJdWey1i4q_ftHoZsFngML-kA8KBImeiirtCHs6V1eA3LxJ5a_KojK7aPcA9VgvPH1987I4gqHFedtLZkV5dewYt4HGQ4O3YQ8IsX1Nse0ib2Sw
-            -
-              kty: EC
-              use: sig
-              kid: Nng1Yy1SMmFoRC1VQ2g4NllXSEU1dEtkY0VkX3pweG5RXzdLMjY1WkJNMA
-              crv: P-256
-              x: yLcidWumqjOPjJI1OcSjgTtqmOfNzC0APWKdRIFik3Y
-              y: 8IkDqyQyLHB10Klvz7vJIb6jrlJ_-HDgMGusR_JzckE
+          - e: AQAB
+            kid: ZXFYbDlqWkNzaWd1eDNseTVfWFBNUWRFX3lrQ2Y3b2owaWVMTjNhcnpBMA
+            kty: RSA
+            n: qHE53SwNAYWZfLQufshE5vhJDBzAEgdO762SkGcV59GDx2VZIyoSek3Y8X8_Z6pVGeDovBQCBstwD7X4ZL4ynMsGb_Szphx2dlcvYPHfY4BFJWGoROPzo8VJ-z5CLseHKg_LXL-PxTHziZFBawMJn5vTodRQVJIU_WA5K408WuNgBh_IhkTj37L-fajwExYoPMWu-YMNlUWD8ta_hnHxLE43QZW5shq09LcTj9VcJdWey1i4q_ftHoZsFngML-kA8KBImeiirtCHs6V1eA3LxJ5a_KojK7aPcA9VgvPH1987I4gqHFedtLZkV5dewYt4HGQ4O3YQ8IsX1Nse0ib2Sw
+            use: sig
+          - crv: P-256
+            kid: Nng1Yy1SMmFoRC1VQ2g4NllXSEU1dEtkY0VkX3pweG5RXzdLMjY1WkJNMA
+            kty: EC
+            use: sig
+            x: yLcidWumqjOPjJI1OcSjgTtqmOfNzC0APWKdRIFik3Y
+            y: 8IkDqyQyLHB10Klvz7vJIb6jrlJ_-HDgMGusR_JzckE
       httpc_params:
         verify: false
         timeout: 14

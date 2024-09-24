@@ -221,6 +221,23 @@ OPENID_CREDENTIAL_ISSUER_CONFIG = {
         ],
         "display": {},
         "credential_configurations_supported": {
+            "Geant_CID_example": {
+                "format": "vc+sd-jwt",
+                "scope": "Geant_CID_example",
+                "vct": "https://edugain.com",
+                "cryptographic_binding_methods_supported": [
+                    "jwk"
+                ],
+                "credential_signing_alg_values_supported": [
+                    "ES256"
+                ],
+                "claims": {
+                    "given_name": {},
+                    "family_name": {},
+                    "email": {},
+                    "phone_number": {}
+                }
+            },
             "SD_JWT_VC_example_in_OpenID4VCI": {
                 "format": "vc+sd-jwt",
                 "scope": "SD_JWT_VC_example_in_OpenID4VCI",

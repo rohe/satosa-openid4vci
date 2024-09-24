@@ -1,13 +1,9 @@
 from typing import List
 from typing import Optional
 
+from fedservice.utils import make_federation_entity
 from idpyoidc.client.defaults import DEFAULT_KEY_DEFS
 
-from fedservice.defaults import DEFAULT_FEDERATION_ENTITY_ENDPOINTS
-from fedservice.utils import make_federation_combo
-from fedservice.utils import make_federation_entity
-from tests import CRYPT_CONFIG
-from tests import SESSION_PARAMS
 
 def main(entity_id: str,
          authority_hints: Optional[List[str]] = None,

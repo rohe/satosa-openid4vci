@@ -15,9 +15,6 @@ from utils import load_values_from_file
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
-#template_dir = os.path.join(dir_path, 'templates')
-
-
 def init_app(config_file, name=None, subdir="", **kwargs) -> Flask:
     name = name or __name__
     _cnf = load_config_file(f"{subdir}/{config_file}")

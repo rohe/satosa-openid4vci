@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Access Token Request</title>
+</head>
+<body>
+<h2>4:2 Access Token Request</h2>
+<dl>
+    <dt style="color: blue">Request</dt>
+    <dd>
+        <dl>
+            {% for key, value in request.items() %}
+            <dt>{{ key }}</dt>
+            <dd>{{ value }}</dd>
+            {% endfor %}
+        </dl>
+    </dd>
+    <dt style="color: green">Response</dt>
+    <dd>
+        <dl>
+            {% for key, value in response.items() %}
+            <dt>{{ key }}</dt>
+            <dd>{{ value }}</dd>
+            {% endfor %}
+        </dl>
+    </dd>
+</dl>
+<hr>
+<input type="button" onclick="location.href='/credential';" value="5. Credential Request"/>
+
+</body>
+</html>
