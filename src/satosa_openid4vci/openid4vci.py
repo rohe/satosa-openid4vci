@@ -19,6 +19,7 @@ from satosa_idpyop.core import ExtendedContext
 from satosa_idpyop.core.claims import combine_claim_values
 from satosa_idpyop.core.response import JsonResponse
 from satosa_idpyop.utils import combine_client_subject_id
+from satosa_idpyop.utils import get_http_info
 
 from .endpoints import Openid4VCIEndpoints
 
@@ -124,7 +125,7 @@ class OpenID4VCIFrontend(FrontendModule, Openid4VCIEndpoints):
         """
         logger.debug(f"Internal_resp: {internal_resp}")
 
-        http_info = self.get_http_info(context)
+        http_info = get_http_info(context)
         logger.debug(f"context.state: {context.state.keys()}")
         orig_req = context.state[self.name]["oidc_request"]
 

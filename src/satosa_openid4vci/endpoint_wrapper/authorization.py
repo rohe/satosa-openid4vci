@@ -1,4 +1,5 @@
 import base64
+import json
 import logging
 import os
 from datetime import datetime
@@ -6,6 +7,7 @@ from urllib.parse import parse_qs
 from urllib.parse import urlencode
 from urllib.parse import urlparse
 
+from openid4v.message import AuthorizationDetail
 import satosa
 from idpyoidc.message.oauth2 import AuthorizationErrorResponse
 from idpyoidc.message.oauth2 import AuthorizationResponse
@@ -17,7 +19,8 @@ from openid4v.message import AuthorizationRequest
 from satosa_idpyop.core import ExtendedContext
 from satosa_idpyop.core.claims import combine_claim_values
 from satosa_idpyop.core.response import JsonResponse
-from satosa_idpyop.endpoint_wrapper import EndPointWrapper, get_http_info
+from satosa_idpyop.endpoint_wrapper import EndPointWrapper
+from satosa_idpyop.utils import get_http_info
 
 logger = logging.getLogger(__name__)
 
@@ -83,7 +86,20 @@ class AuthorizationEndpointWrapper(EndPointWrapper):
         logger.debug(f"{endpoint}")
         logger.debug(f"request at frontend: {context.request}")
 
+        if "authorization_details" in context.request:
+            _req = context.request
+            if _req["authorization_details"].startswith("[") and _req[
+                "authorization_details"].endswith("]"):
+                _ads = _req["authorization_details"][1:-1].split(",")
+                _list = []
+                for _url_ad in _ads:
+                    _url_ad = _url_ad[1:-1]
+                    _item = AuthorizationDetail().from_urlencoded(_url_ad)
+                    _list.append(_item.to_dict())
+                context.request["authorization_details"] = _list
+
         http_info = get_http_info(context)
+        logger.debug(f"http_info: {http_info}")
         self.load_cdb(context)
         parse_req = self.parse_request(context.request, http_info)
         if isinstance(parse_req, AuthorizationErrorResponse):

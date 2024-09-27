@@ -173,6 +173,8 @@ def wir():
         crypto_hardware_key_tag=hardware_key_tag
     )
 
+    _wia_info["wallet_instance_attestation"] = wallet_instance_attestation
+
     _jwt = JWT(key_jar=wallet_entity.keyjar)
     _jwt.msg_cls = WalletInstanceAttestationJWT
     _ass = _jwt.unpack(token=wallet_instance_attestation["assertion"])
@@ -245,10 +247,10 @@ def picking_pid_issuer():
 @entity.route('/authz')
 def authz():
     pid_issuer = session["pid_issuer_to_use"]
-    actor = current_app.server["pid_eaa_consumer"]
-    _actor = actor.get_consumer(pid_issuer)
+    parent = current_app.server["pid_eaa_consumer"]
+    _actor = parent.get_consumer(pid_issuer)
     if _actor is None:
-        actor = actor.new_consumer(pid_issuer)
+        actor = parent.new_consumer(pid_issuer)
     else:
         actor = _actor
 
@@ -262,33 +264,30 @@ def authz():
     _wia_flow = wallet_entity.context.wia_flow[_key_tag]
 
     request_args = {
-        # "authorization_details": [
-        #     {
-        #         "type": "openid_credential",
-        #         "format": "vc+sd-jwt",
-        #         "credential_definition": {
-        #             "type": "PersonIdentificationData"
-        #         }
-        #     }
-        # ],
+        "authorization_details": [
+            {
+                "type": "openid_credential",
+                "credential_configuration_id": "PersonIdentificationData"
+            }
+        ],
         "response_type": "code",
         "client_id": _key_tag,
         "redirect_uri": _redirect_uri,
     }
 
-    # _metadata = current_app.federation_entity.get_verified_metadata(pid_issuer)
     kwargs = {
         "state": rndstr(24),
-        "wallet_instance_attestation": _wia_flow["wallet_instance_attestation"]
+        "behaviour_args": {
+            "wallet_instance_attestation": _wia_flow["wallet_instance_attestation"]["assertion"],
+            "client_assertion": _wia_flow["wallet_instance_attestation"]["assertion"]
+        }
     }
 
-    if "par" in actor.context.add_on:
+    if "pushed_authorization" in actor.context.add_on:
         _metadata = current_app.federation_entity.get_verified_metadata(actor.context.issuer)
         if "pushed_authorization_request_endpoint" in _metadata["oauth_authorization_server"]:
-            kwargs["behaviour_args"] = {
-                "pushed_authorization_request_endpoint": _metadata["oauth_authorization_server"][
-                    "pushed_authorization_request_endpoint"]
-            }
+            kwargs["behaviour_args"]["pushed_authorization_request_endpoint"] = _metadata[
+                "oauth_authorization_server"]["pushed_authorization_request_endpoint"]
 
     _wia_flow["state"] = kwargs["state"]
 
@@ -299,8 +298,9 @@ def authz():
 
     session["auth_req_uri"] = req_info['url']
     logger.info(f"Redirect to: {req_info['url']}")
-    response = redirect(req_info["url"], 303)
-    return response
+    redir = redirect(req_info["url"])
+    redir.status_code = 302
+    return redir
 
 
 def get_consumer(issuer):

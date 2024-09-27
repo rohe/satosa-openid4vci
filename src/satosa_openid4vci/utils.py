@@ -36,32 +36,6 @@ class Openid4VCIUtils(object):
     def __init__(self, app=None):  # pragma: no cover
         self.app = app
 
-    def get_http_info(self, context: ExtendedContext):
-        """
-        Aligns parameters for idpy_oidc interoperability needs
-        """
-        http_info = {"headers": {}}
-
-        if getattr(context, "http_info", None):
-            http_info = {
-                "headers": {
-                    k.lower(): v
-                    for k, v in context.http_info.items()
-                    if k not in IGNORED_HEADERS
-                },
-                "method": context.request_method,
-                "url": context.request_uri,
-            }
-
-        if getattr(context, "request_authorization", None):
-            http_info["headers"].update(
-                {"authorization": context.request_authorization}
-            )
-
-        context.http_info = http_info
-
-        return http_info
-
     def parse_request(self,
                       endpoint: Endpoint,
                       request: dict,

@@ -1,5 +1,7 @@
 import logging
 
+from cryptojwt import JWT
+from cryptojwt.jws.jws import factory
 from idpyoidc.message import Message
 from openid4v.message import AuthorizationDetail
 from openid4v.message import AuthorizationRequest
@@ -9,6 +11,7 @@ from satosa_idpyop.core import ExtendedContext
 from satosa_idpyop.core.response import JWSResponse
 from satosa_idpyop.core.response import JsonResponse
 from satosa_idpyop.endpoint_wrapper.token import TokenEndpointWrapper
+from satosa_idpyop.utils import get_http_info
 
 from satosa_openid4vci.endpoint_wrapper.authorization import AuthorizationEndpointWrapper
 from satosa_openid4vci.endpoint_wrapper.credential import CredentialEndpointWrapper
@@ -60,7 +63,8 @@ class Openid4VCIEndpoints(Openid4VCIUtils):
         endpoint = _guise.get_endpoint(endpoint)
         logger.debug(20 * "=" + f'Request at the "{endpoint.name}" endpoint' + 20 * "-")
         logger.debug(f"endpoint={endpoint}")
-        http_info = self.get_http_info(context)
+        http_info = get_http_info(context)
+        logger.debug(f"http_info: {http_info}")
 
         return {
             "http_info": http_info,
@@ -140,27 +144,38 @@ class Openid4VCIEndpoints(Openid4VCIUtils):
         _env["endpoint"].request_format = "dict"
         _env["endpoint"].request_cls = AuthorizationRequest
 
+        if "request" in context.request:
+            _keyjar = _env["endpoint"].upstream_get("attribute", "keyjar")
+            _jws = factory(context.request["request"])
+            _iss = _jws.jwt.payload()["iss"]
+            if _iss not in _keyjar:
+                logger.debug(f"Unregistered client '{_iss}'")
+                # do automatic registration
+
+            _jwt = JWT(key_jar=_keyjar)
+            _request = _jwt.unpack(context.request["request"])
+            del context.request["request"]
+            context.request.update(_request)
+
+        logger.debug(f"request: {context.request}")
+
         # This is not how it should be done, but it has to be done.
-        logger.debug(f"Before adl: {context.request['authorization_details']}")
-        if isinstance(context.request, Message):
-            adl = context.request["authorization_details"]
-        else:
-            adl = auth_detail_list_deser(context.request["authorization_details"],
-                                         sformat="urlencoded")
-        logger.debug(f"adl: {adl} {type(adl)}")
-        _adl = [v.to_dict() for v in adl]
-        context.request["authorization_details"] = _adl
+        if "authorization_details"  in context.request:
+            logger.debug("Need to deal with 'authorization_details'")
+            if context.request["authorization_details"].startswith("[") and context.request[
+                    "authorization_details"].endswith("]"):
+                _ads = context.request["authorization_details"][1:-1].split(",")
+                _list = []
+                for _url_ad in _ads:
+                    _url_ad = _url_ad[1:-1]
+                    _item = AuthorizationDetail().from_urlencoded(_url_ad)
+                    _list.append(_item.to_dict())
+                context.request["authorization_details"] = _list
 
         logger.debug(f"Incoming request: {context.request}")
         parse_req = self.parse_request(_env["endpoint"], context.request,
                                        http_info=_env["http_info"])
         logger.debug(f"Parsed request: {parse_req} {type(parse_req)}")
-        logger.debug(f"ad type: {type(context.request['authorization_details'][0])}")
-        logger.debug(
-            f"cd type: "
-            f"{type(context.request['authorization_details'][0]['credential_definition'])}")
-        parse_req["authorization_details"] = [AuthorizationDetail(**item) for item in parse_req[
-            "authorization_details"]]
         proc_req = self.process_request(_env["endpoint"], context, parse_req, _env["http_info"])
         if isinstance(proc_req, JsonResponse):  # pragma: no cover
             return self.send_response(proc_req)

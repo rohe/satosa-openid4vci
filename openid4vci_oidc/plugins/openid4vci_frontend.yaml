@@ -30,10 +30,12 @@ config:
               value_conv: idpyoidc.util.JSON
       key_config:
         key_defs:
-          - type: RSA
+          -
+            type: RSA
             use:
               - sig
-          - type: EC
+          -
+            type: EC
             crv: P-256
             use:
               - sig
@@ -46,7 +48,7 @@ config:
       authority_hints:
         - https://127.0.0.1:7003
       trust_marks:
-        - eyJhbGciOiJSUzI1NiIsImtpZCI6IlMycDFiek5GWjNGa09IVnBPV1JsTUVWNGFGWm9SVVZGU0hnelR6ZEVWbEJXVFVvemVqQkRVWGgwT0EifQ.eyJpYXQiOiAxNzI3MTY1NDYzLCAiaWQiOiAiaHR0cDovL2RjNGV1LmV4YW1wbGUuY29tL1BlcnNvbklkZW50aWZpY2F0aW9uRGF0YS9zZSIsICJzdWIiOiAiaHR0cHM6Ly8xMjcuMC4wLjE6ODA4MCIsICJleHAiOiAxNzI5NzU3NDYzLCAiaXNzIjogImh0dHBzOi8vMTI3LjAuMC4xOjYwMDAifQ.OrFIg8crAYveCIHI4JQrXIJzyY3vWtbbilrrkGuctVm2bTRwPlb22qmgJPOCAnYwhi1eyWvWdVN2oHw-5lA3cO6nVrfCxp_wYdhLmqF_p2vMT4x5ei06eR56j4hirkVwYAA45pmCesrKRbP8mV_GTvrwScIKLRc4Q6HHkxoZT9BS1L8jjnSTHqNHICeKZpj76To8uAcAC_bksd956in11wi8DfBjzFPc5JxKtVFc8MeNEEVspIckz62UFYejCaQp7X7_wghynvcthF4jjEyaufcSS37HgvpiKeArj416exV07Jt9ZiOLDelNWwnoE-8CBfdEjNylRfaevmkqdTJa0g
+        - eyJhbGciOiJSUzI1NiIsImtpZCI6ImRqZEdaM0ExZGxaUWMwcDFPVXhoTTBOcVQzQm1URzlKTFdaS05IUlFXVVpZYTJGRGIzZGpXbGhhVFEifQ.eyJpYXQiOiAxNzI3MTgwMTU2LCAiaWQiOiAiaHR0cDovL2RjNGV1LmV4YW1wbGUuY29tL1BlcnNvbklkZW50aWZpY2F0aW9uRGF0YS9zZSIsICJzdWIiOiAiaHR0cHM6Ly8xMjcuMC4wLjE6ODA4MCIsICJleHAiOiAxNzI5NzcyMTU2LCAiaXNzIjogImh0dHBzOi8vMTI3LjAuMC4xOjYwMDAifQ.FV8sp266Zb37JG_A7S2n493B2UMttKWs-iZBIhUfr2WAyjtXkYo0IV3k7Z6UA_tAa1fWVFyN_8tf3UP-85hUn0mi22oAS5WcMTn7yJIa0Jr21NXvy5sQ5_P6jSPAiYuM64NIYsL-IIeX2HdPrO1q1534NqjsolnH-fDMbA1JYgnz79OmC4MpzAlklyz2auPfIwuCPUKjtE0oUlhrbfd126VaOroFRZ3k6lUs6cytXKJT00xizJmhIdwIQ2A7aIdFHhAOecInF9VKy4MwQwf78kRufB_KB4hFPIOgDwosEZat4fLVu3HKOgp4RoPetXzxqZRoO9y4qCNLdAWCXBoJVg
       endpoints:
         entity_configuration:
           path: ".well-known/openid-federation"
@@ -54,17 +56,19 @@ config:
       trust_anchors:
         https://127.0.0.1:7003:
           keys:
-          - e: AQAB
-            kid: ZXFYbDlqWkNzaWd1eDNseTVfWFBNUWRFX3lrQ2Y3b2owaWVMTjNhcnpBMA
-            kty: RSA
-            n: qHE53SwNAYWZfLQufshE5vhJDBzAEgdO762SkGcV59GDx2VZIyoSek3Y8X8_Z6pVGeDovBQCBstwD7X4ZL4ynMsGb_Szphx2dlcvYPHfY4BFJWGoROPzo8VJ-z5CLseHKg_LXL-PxTHziZFBawMJn5vTodRQVJIU_WA5K408WuNgBh_IhkTj37L-fajwExYoPMWu-YMNlUWD8ta_hnHxLE43QZW5shq09LcTj9VcJdWey1i4q_ftHoZsFngML-kA8KBImeiirtCHs6V1eA3LxJ5a_KojK7aPcA9VgvPH1987I4gqHFedtLZkV5dewYt4HGQ4O3YQ8IsX1Nse0ib2Sw
-            use: sig
-          - crv: P-256
-            kid: Nng1Yy1SMmFoRC1VQ2g4NllXSEU1dEtkY0VkX3pweG5RXzdLMjY1WkJNMA
-            kty: EC
-            use: sig
-            x: yLcidWumqjOPjJI1OcSjgTtqmOfNzC0APWKdRIFik3Y
-            y: 8IkDqyQyLHB10Klvz7vJIb6jrlJ_-HDgMGusR_JzckE
+            -
+              e: AQAB
+              kid: NkQ2SzdFaXNoTlUyTWU3aVpSRHdsYzA2OVE4RjZMekNidjdiSmg4WVdPbw
+              kty: RSA
+              n: ob3_SmkC_osUWKVIycjLSHkDctVZMzy6sde-8o6K6hAs94JsFqzyTqFSAUxqx6Rn_KiNWp_MHhhnOM6RjP449azy9ZylyCoStEwUv81MhMDKJMGV97km_6en7puq12I6iLvO3aDwiNWCD2MrbeI6CNBrUp1jc77LuBc2g-BJbfA0MnyqBjVEDtdcd-WYw15Kkgsct2M7TdJq04R_s0JboJFe1wwqLmnlBnOoDoxW1q6ucYV5a_iJhejtCZhGP-aDaH-L2vjNf0zjD168UX-whHI5Ww4GTf0_JOM7yYaO9IWINEEgGCybjU5HecFrN94eOFZnzR-yzvJskW1AcWjSjQ
+              use: sig
+            -
+              crv: P-256
+              kid: cFNkajZlc0RKSHdqb2x3cUJuc0NEcnMtM2dvWkNOSWtzcEc5Ym40ZjhYbw
+              kty: EC
+              use: sig
+              x: edRaqx_vog8-xJdnogkzHHml59ThEs02GFrpCcuRCHQ
+              y: lsj-yN3oueZa5Z-F0FPV6rdQ_4-Ec9bo6MP84xnVCTs
       httpc_params:
         verify: false
         timeout: 14
@@ -76,10 +80,11 @@ config:
               client_authn_methods:
                 client_secret_jwt: idpyoidc.server.client_authn.ClientSecretJWT
                 private_key_jwt: idpyoidc.server.client_authn.PrivateKeyJWT
-                client_secret_basic: idpyoidc.server.client_authn.ClientSecretBasic,
-                client_secret_post: idpyoidc.server.client_authn.ClientSecretPost,
+                client_secret_basic: idpyoidc.server.client_authn.ClientSecretBasic
+                client_secret_post: idpyoidc.server.client_authn.ClientSecretPost
                 client_assertion: openid4v.openid_credential_issuer.client_authn.ClientAuthenticationAttestation
                 dpop_client_auth: idpyoidc.server.oauth2.add_on.dpop.DPoPClientAuth
+                request_param: idpyoidc.server.client_authn.RequestParam
               httpc_params:
                 verify: false
                 timeout: 12
@@ -178,6 +183,15 @@ config:
                       - form_post
                     request_parameter_supported: true
                     request_uri_parameter_supported: true
+                    client_authn_method:
+                      - pushed_authz
+                pushed_authorization:
+                  path: par
+                  class:
+                    idpyoidc.server.oauth2.pushed_authorization.PushedAuthorization
+                  kwargs:
+                    client_authn_method:
+                      - client_assertion
               add_ons:
                 pkce:
                   function: idpyoidc.server.oauth2.add_on.pkce.add_support

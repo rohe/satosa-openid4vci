@@ -17,7 +17,7 @@
     "handlers": {
       "default": {
         "class": "logging.FileHandler",
-        "filename": "log/dc4eu_debug.log",
+        "filename": "log/wallet.log",
         "formatter": "default"
       },
       "console": {
@@ -112,6 +112,23 @@
         "class": "openid4v.client.pid_eaa_consumer.PidEaaHandler",
         "kwargs": {
           "config": {
+            "keys": {
+              "key_defs": [
+                {
+                  "type": "RSA",
+                  "use": [
+                    "sig"
+                  ]
+                },
+                {
+                  "type": "EC",
+                  "crv": "P-256",
+                  "use": [
+                    "sig"
+                  ]
+                }
+              ]
+            },
             "httpc_params": {
               "verify": false
             },
@@ -131,7 +148,7 @@
                   ]
                 }
               },
-              "pushed_authorization": {
+              "par": {
                 "function": "idpyoidc.client.oauth2.add_on.par.add_support",
                 "kwargs": {
                   "authn_method": {
@@ -151,12 +168,19 @@
                 "form_post"
               ],
               "request_parameter_supported": true,
-              "request_uri_parameter_supported": true
+              "request_uri_parameter_supported": true,
+              "encrypt_request_object_supported": false
             },
             "services": {
               "pid_eaa_authorization": {
                 "class": "openid4v.client.pid_eaa.Authorization",
-                "kwargs": {}
+                "kwargs": {
+                  "client_authn_methods": {
+                    "request_param": "idpyoidc.client.client_auth.RequestParam",
+                    "client_authentication_attestation": "openid4v.client.client_authn.ClientAuthenticationAttestation"
+                  },
+                  "default_authn_method": "request_param"
+                }
               },
               "pid_eaa_token": {
                 "class": "openid4v.client.pid_eaa.AccessToken",

@@ -3,7 +3,7 @@ import logging
 from idpyoidc.message import Message
 from satosa_idpyop.core.response import JsonResponse
 from satosa_idpyop.endpoint_wrapper import EndPointWrapper
-from satosa_idpyop.endpoint_wrapper import get_http_info
+from satosa_idpyop.utils import get_http_info
 
 logger = logging.getLogger(__name__)
 
