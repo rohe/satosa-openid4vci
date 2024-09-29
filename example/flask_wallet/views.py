@@ -210,7 +210,7 @@ def picking_pid_issuer():
     for pid in set(res):
         oci_metadata = current_app.federation_entity.get_verified_metadata(pid)
         # logger.info(json.dumps(oci_metadata, sort_keys=True, indent=4))
-        for cs in oci_metadata['openid_credential_issuer']["credential_configurations_supported"]:
+        for id, cs in oci_metadata['openid_credential_issuer']["credential_configurations_supported"].items():
             if credential_type in cs["credential_definition"]["type"]:
                 _oci[pid] = oci_metadata
                 break
@@ -264,12 +264,11 @@ def authz():
     _wia_flow = wallet_entity.context.wia_flow[_key_tag]
 
     request_args = {
-        "authorization_details": [
-            {
-                "type": "openid_credential",
-                "credential_configuration_id": "PersonIdentificationData"
-            }
-        ],
+        "authorization_details": [{
+            "type": "openid_credential",
+            "format": "vc+sd-jwt",
+            "vct": "PersonIdentificationData"
+        }],
         "response_type": "code",
         "client_id": _key_tag,
         "redirect_uri": _redirect_uri,
@@ -342,7 +341,7 @@ def token():
     _args = {
         "audience": consumer.context.issuer,
         "thumbprint": _key_tag,
-        "wallet_instance_attestation": _wia_flow["wallet_instance_attestation"],
+        "wallet_instance_attestation": _wia_flow["wallet_instance_attestation"]["assertion"],
         "signing_key": wallet_entity.get_ephemeral_key(_key_tag)
     }
     _nonce = _req_args.get("nonce", "")
@@ -386,18 +385,17 @@ def credential():
     wallet_entity.keyjar.import_jwks(issuer_id=consumer.context.issuer,
                                      jwks=trust_chain.metadata["openid_credential_issuer"]["jwks"])
 
-    consumer.context.keyjar = wallet_entity.keyjar
+    #consumer.context.keyjar = wallet_entity.keyjar
+    consumer.keyjar = wallet_entity.keyjar
     _key_tag = session["ephemeral_key_tag"]
     _wia_flow = wallet_entity.context.wia_flow[_key_tag]
 
     _req_args = consumer.context.cstate.get_set(_wia_flow["state"], claim=["access_token"])
 
     _request_args = {
-        "format": "vc+sd-jwt",
-        "credential_definition": {
-            "type": ["PersonIdentificationData"]
-        }
+        "format": "vc+sd-jwt"
     }
+
     _service = consumer.get_service("credential")
     req_info = _service.get_request_parameters(_request_args, access_token=_req_args["access_token"],
                                                state=_wia_flow["state"])

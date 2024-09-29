@@ -102,6 +102,7 @@ class Openid4VCIEndpoints(Openid4VCIUtils):
         Checks client_id and handles the authorization request
         """
         logger.debug("At the Authorization Endpoint")
+        logger.debug(20 * "=" + f'Request at the "Authorization" endpoint' + 20 * "-")
         _guise = self.app.server['oauth_authorization_server']
         _guise.persistence.restore_pushed_authorization()
         _fed_entity = self.app.server["federation_entity"]
@@ -188,5 +189,5 @@ class Openid4VCIEndpoints(Openid4VCIUtils):
         _fed_entity.persistence.store_state()
 
         logger.debug(f"PAR response: {proc_req}")
-        response = JsonResponse(proc_req["http_response"])
+        response = JsonResponse(proc_req["response_args"])
         return self.send_response(response)

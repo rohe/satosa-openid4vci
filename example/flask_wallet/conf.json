@@ -178,8 +178,7 @@
                   "client_authn_methods": {
                     "request_param": "idpyoidc.client.client_auth.RequestParam",
                     "client_authentication_attestation": "openid4v.client.client_authn.ClientAuthenticationAttestation"
-                  },
-                  "default_authn_method": "request_param"
+                  }
                 }
               },
               "pid_eaa_token": {
