@@ -1,10 +1,9 @@
-import json
 import logging
 
 import werkzeug
 from cryptojwt import JWT
-from cryptojwt.jws.jws import factory
-from cryptojwt.utils import b64e
+from cryptojwt.jwk.ec import new_ec_key
+from cryptojwt.utils import b64e, as_unicode
 from fedservice.entity import get_verified_trust_chains
 from flask import Blueprint
 from flask import current_app
@@ -54,85 +53,51 @@ def send_image(path):
     return send_from_directory('img', path)
 
 
+
 @entity.route('/wallet_provider')
 def wallet_provider():
     wp_id = request.args["entity_id"]
     session["wallet_provider_id"] = wp_id
-    trust_chain = current_app.federation_entity.get_trust_chains(wp_id)
+    wallet_entity = current_app.server["wallet"]
+
+    trust_chain = wallet_entity.get_trust_chains(wp_id)
 
     return render_template('wallet_provider.html',
                            trust_chain_path=trust_chain[0].iss_path,
                            metadata=trust_chain[0].metadata)
 
 
-@entity.route('/app_attestation')
-def app_attestation():
+
+@entity.route('/wallet_attestation_issuance')
+def wai():
+    return render_template('wallet_attestation_issuance.html')
+
+
+@entity.route('/wallet_instance_request')
+def wir():
     # This is where the attestation request is constructed and sent to the Wallet Provider.
     # And where the response is unpacked.
     wallet_entity = current_app.server["wallet"]
     wallet_provider_id = session["wallet_provider_id"]
+    _wia_info = wallet_entity.context.wia_flow[session["ephemeral_key_tag"]]
 
-    # APP Attestation
-    trust_chains = current_app.federation_entity.get_trust_chains(wallet_provider_id)
+    wallet_instance_attestation, war_payload = wallet_entity.request_wallet_instance_attestation(
+        wallet_provider_id,
+        challenge="__not__applicable__",
+        ephemeral_key_tag=session["ephemeral_key_tag"],
+        integrity_assertion="__not__applicable__",
+        hardware_signature="__not__applicable__",
+        crypto_hardware_key_tag="__not__applicable__"
+    )
 
-    request_args = {}
-    resp = wallet_entity.do_request(
-        "app_attestation",
-        request_args=request_args,
-        endpoint=trust_chains[0].metadata['wallet_provider']['app_attestation_endpoint'])
-
-    session["nonce"] = resp["nonce"]
-    return render_template('app_attestation.html',
-                           app_attestation_request=json.dumps({"iccid": "89470000000000000001"}),
-                           app_attestation_response=resp)
-
-
-@entity.route('/wallet_instance_attestation')
-def wallet_instance_attestation():
-    # This is where the attestation request is constructed and sent to the Wallet Provider.
-    # And where the response is unpacked.
-    wallet_entity = current_app.server["wallet"]
-    wallet_provider_id = session["wallet_provider_id"]
-
-    trust_chains = current_app.federation_entity.get_trust_chains(wallet_provider_id)
-    trust_chain = trust_chains[0]
-
-    # WIA request
-    _service = wallet_entity.get_service("wallet_instance_attestation")
-    _service.wallet_provider_id = wallet_provider_id
-
-    request_args = {"nonce": session["nonce"], "aud": wallet_provider_id}
-
-    # this is just to be able to show what's sent
-    req_info = _service.get_request_parameters(
-        request_args,
-        endpoint=trust_chain.metadata['wallet_provider']['token_endpoint'])
-    _ra_jwt = factory(req_info["request"]["assertion"])
-    req_assertion = _ra_jwt.jwt.payload()
-    req_assertion["iss"] = "__jwk_thumbprint__"
-    req_assertion["cnf"]["kid"] = "__jwk_thumbprint__"
-    _request_headers = _ra_jwt.jwt.headers.copy()
-    _request_headers["kid"] = "__jwk_thumbprint__"
-
-    # This is where the request is actually sent
-    resp = wallet_entity.do_request(
-        "wallet_instance_attestation",
-        request_args=request_args,
-        endpoint=trust_chain.metadata['wallet_provider']['token_endpoint'])
-
-    wallet_instance_attestation = resp["assertion"]
+    _wia_info["wallet_instance_attestation"] = wallet_instance_attestation
 
     _jwt = JWT(key_jar=wallet_entity.keyjar)
     _jwt.msg_cls = WalletInstanceAttestationJWT
-    _ass = _jwt.unpack(token=wallet_instance_attestation)
-    session["thumbprint_in_cnf_jwk"] = _ass["cnf"]["jwk"]["kid"]
+    _ass = _jwt.unpack(token=wallet_instance_attestation["assertion"])
 
-    del req_info["request"]
-
-    return render_template('wallet_instance_attestation.html',
-                           req_assertion=req_assertion,
-                           request_headers=_request_headers,
-                           req_info=req_info,
+    return render_template('wallet_instance_attestation_request.html',
+                           request_args=war_payload,
                            wallet_instance_attestation=_ass,
                            response_headers=_ass.jws_header)
 
@@ -147,6 +112,8 @@ def picking_pid_issuer():
     for entity_id in list_resp:
         # first find out if the entity is an openid credential issuer
         _metadata = current_app.federation_entity.get_verified_metadata(entity_id)
+        if not _metadata:  # Simple fix
+            continue
         if "openid_credential_issuer" in _metadata:
             res.append(entity_id)
         res.extend(
@@ -157,10 +124,10 @@ def picking_pid_issuer():
 
     _oci = {}
     credential_type = "PersonIdentificationData"
-    for pid in res:
+    for pid in set(res):
         oci_metadata = current_app.federation_entity.get_verified_metadata(pid)
         # logger.info(json.dumps(oci_metadata, sort_keys=True, indent=4))
-        for cs in oci_metadata['openid_credential_issuer']["credentials_supported"]:
+        for id, cs in oci_metadata['openid_credential_issuer']["credential_configurations_supported"].items():
             if credential_type in cs["credential_definition"]["type"]:
                 _oci[pid] = oci_metadata
                 break
@@ -197,44 +164,48 @@ def picking_pid_issuer():
 @entity.route('/authz')
 def authz():
     pid_issuer = session["pid_issuer_to_use"]
-    actor = current_app.server["pid_eaa_consumer"]
-    _actor = actor.get_consumer(pid_issuer)
+    parent = current_app.server["pid_eaa_consumer"]
+    _actor = parent.get_consumer(pid_issuer)
     if _actor is None:
-        actor = actor.new_consumer(pid_issuer)
+        actor = parent.new_consumer(pid_issuer)
     else:
         actor = _actor
+
+    wallet_entity = current_app.server["wallet"]
 
     b64hash = hash_func(pid_issuer)
     _redirect_uri = f"https://127.0.0.1:5005/authz_cb/{b64hash}"
     session["redirect_uri"] = _redirect_uri
-    _thumbprint = session["thumbprint_in_cnf_jwk"]
-    wallet_entity = current_app.server["wallet"]
+
+    _key_tag = session["ephemeral_key_tag"]
+    _wia_flow = wallet_entity.context.wia_flow[_key_tag]
+
     request_args = {
-        "authorization_details": [
-            {
-                "type": "openid_credential",
-                "format": "vc+sd-jwt",
-                "credential_definition": {
-                    "type": "PersonIdentificationData"
-                }
-            }
-        ],
+        "authorization_details": [{
+            "type": "openid_credential",
+            "format": "vc+sd-jwt",
+            "vct": "PersonIdentificationData"
+        }],
         "response_type": "code",
-        "client_id": _thumbprint,
+        "client_id": _key_tag,
         "redirect_uri": _redirect_uri,
     }
 
-    _metadata = current_app.federation_entity.get_verified_metadata(pid_issuer)
     kwargs = {
         "state": rndstr(24),
         "behaviour_args": {
-            'pushed_authorization_request_endpoint': _metadata["oauth_authorization_server"][
-                'pushed_authorization_request_endpoint'],
-            "wallet_instance_attestation": wallet_entity.context.wallet_instance_attestation[_thumbprint]["attestation"]
+            "wallet_instance_attestation": _wia_flow["wallet_instance_attestation"]["assertion"],
+            "client_assertion": _wia_flow["wallet_instance_attestation"]["assertion"]
         }
     }
 
-    session["state"] = kwargs["state"]
+    if "pushed_authorization" in actor.context.add_on:
+        _metadata = current_app.federation_entity.get_verified_metadata(actor.context.issuer)
+        if "pushed_authorization_request_endpoint" in _metadata["oauth_authorization_server"]:
+            kwargs["behaviour_args"]["pushed_authorization_request_endpoint"] = _metadata[
+                "oauth_authorization_server"]["pushed_authorization_request_endpoint"]
+
+    _wia_flow["state"] = kwargs["state"]
 
     _service = actor.get_service("authorization")
     _service.certificate_issuer_id = pid_issuer
@@ -243,8 +214,9 @@ def authz():
 
     session["auth_req_uri"] = req_info['url']
     logger.info(f"Redirect to: {req_info['url']}")
-    response = redirect(req_info["url"], 303)
-    return response
+    redir = redirect(req_info["url"])
+    redir.status_code = 302
+    return redir
 
 
 def get_consumer(issuer):
@@ -269,24 +241,25 @@ def authz_cb(issuer):
     session["issuer"] = issuer
     return render_template('authorization.html',
                            # par_request=session["par_req"],
-                           auth_req_uri=session["auth_req_uri"],
+                           # auth_req_uri=session["auth_req_uri"],
                            response=request.args.to_dict())
 
 
 @entity.route('/token')
 def token():
     consumer = get_consumer(session["issuer"])
-    _req_args = consumer.context.cstate.get_set(session["state"], claim=["redirect_uri", "code", "nonce"])
-    trust_chains = get_verified_trust_chains(consumer, consumer.context.issuer)
-    trust_chain = trust_chains[0]
-    _thumbprint = session["thumbprint_in_cnf_jwk"]
+
     wallet_entity = current_app.server["wallet"]
+    _key_tag = session["ephemeral_key_tag"]
+    _wia_flow = wallet_entity.context.wia_flow[_key_tag]
+
+    _req_args = consumer.context.cstate.get_set(_wia_flow["state"], claim=["redirect_uri", "code", "nonce"])
+
     _args = {
         "audience": consumer.context.issuer,
-        "thumbprint": _thumbprint,
-        "wallet_instance_attestation":
-            wallet_entity.context.wallet_instance_attestation[_thumbprint]["attestation"],
-        "signing_key": wallet_entity.keyjar.get_signing_key(kid=_thumbprint)[0]
+        "thumbprint": _key_tag,
+        "wallet_instance_attestation": _wia_flow["wallet_instance_attestation"]["assertion"],
+        "signing_key": wallet_entity.get_ephemeral_key(_key_tag)
     }
     _nonce = _req_args.get("nonce", "")
     if _nonce:
@@ -299,19 +272,20 @@ def token():
         "code": _req_args["code"],
         "grant_type": "authorization_code",
         "redirect_uri": _req_args["redirect_uri"],
-        "state": session["state"]
+        "state": _wia_flow["state"]
     }
 
+    # Just for display purposes
     _service = consumer.get_service("accesstoken")
     _metadata = current_app.federation_entity.get_verified_metadata(consumer.context.issuer)
     _args["endpoint"] = _metadata['oauth_authorization_server']['token_endpoint']
     req_info = _service.get_request_parameters(_request_args, **_args)
 
+    # Real request
     resp = consumer.do_request(
         "accesstoken",
         request_args=_request_args,
-#        endpoint=trust_chain.metadata['oauth_authorization_server']['token_endpoint'],
-        state=session["state"],
+        state=_wia_flow["state"],
         **_args
     )
     del req_info["request"]
@@ -321,29 +295,33 @@ def token():
 @entity.route('/credential')
 def credential():
     consumer = get_consumer(session["issuer"])
-    _req_args = consumer.context.cstate.get_set(session["state"], claim=["access_token"])
+
     trust_chains = get_verified_trust_chains(consumer, consumer.context.issuer)
     trust_chain = trust_chains[0]
     wallet_entity = current_app.server["wallet"]
-    wallet_entity.keyjar.load_keys(issuer_id=consumer.context.issuer,
-                                   jwks_uri=trust_chain.metadata["openid_credential_issuer"]["jwks_uri"])
-    consumer.context.keyjar = wallet_entity.keyjar
+    wallet_entity.keyjar.import_jwks(issuer_id=consumer.context.issuer,
+                                     jwks=trust_chain.metadata["openid_credential_issuer"]["jwks"])
+
+    #consumer.context.keyjar = wallet_entity.keyjar
+    consumer.keyjar = wallet_entity.keyjar
+    _key_tag = session["ephemeral_key_tag"]
+    _wia_flow = wallet_entity.context.wia_flow[_key_tag]
+
+    _req_args = consumer.context.cstate.get_set(_wia_flow["state"], claim=["access_token"])
 
     _request_args = {
-        "format": "vc+sd-jwt",
-        "credential_definition": {
-            "type": ["PersonIdentificationData"]
-        }
+        "format": "vc+sd-jwt"
     }
+
     _service = consumer.get_service("credential")
     req_info = _service.get_request_parameters(_request_args, access_token=_req_args["access_token"],
-                                               state=session["state"])
+                                               state=_wia_flow["state"])
 
     resp = consumer.do_request(
         "credential",
         request_args=_request_args,
         access_token=_req_args["access_token"],
-        state=session["state"],
+        state=_wia_flow["state"],
         endpoint=trust_chain.metadata['openid_credential_issuer']['credential_endpoint']
     )
 

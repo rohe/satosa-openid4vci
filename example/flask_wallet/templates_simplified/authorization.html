@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Authorization succeeded</title>
+</head>
+<body>
+<h2>4:1 Authorization request</h2>
+Again this contains more than one step.
+<dl>
+    <dt style="color: blue">Authz request</dt>
+    <dd>{{auth_req_uri}}<p></p></dd>
+    </dt>
+    <dt style="color: green">Authorization Response</dt>
+    <dd>
+        <dl>
+            {% for key, value in response.items() %}
+            <dt>{{ key }}</dt>
+            <dd>{{ value }}</dd>
+            {% endfor %}
+        </dl>
+    </dd>
+</dl>
+
+<hr>
+<input type="button" onclick="location.href='/token';" value="4:2 Token Request"/>
+
+</body>
+</html>

@@ -32,7 +32,7 @@
       }
     }
   },
-  "template_dir": "templates_simplified",
+  "template_dir": "templates_full",
   "entity": {
     "entity_id": "https://127.0.0.1:5005",
     "httpc_params": {

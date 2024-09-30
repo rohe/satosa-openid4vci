@@ -53,6 +53,72 @@ def send_image(path):
     return send_from_directory('img', path)
 
 
+@entity.route('/wir_challenge', methods=['GET'])
+def challenge1():
+    wallet_entity = current_app.server["wallet"]
+    wallet_provider_id = session["wallet_provider_id"]
+
+    _challenge = wallet_entity.request_challenge(wallet_provider_id)
+
+    wallet_entity.context.crypto_hardware_key = new_ec_key('P-256')
+
+    session["challenge_wir"] = _challenge
+
+    return render_template('wir_challenge.html', challenge_response=_challenge)
+
+
+@entity.route('/wai_challenge', methods=['GET'])
+def challenge2():
+    wallet_entity = current_app.server["wallet"]
+    wallet_provider_id = session["wallet_provider_id"]
+
+    _challenge = wallet_entity.request_challenge(wallet_provider_id)
+
+    session["challenge_wai"] = _challenge
+
+    return render_template('wai_challenge.html', challenge_response=_challenge)
+
+
+@entity.route('/key_attestation', methods=['GET'])
+def attest_key():
+    wallet_entity = current_app.server["wallet"]
+    wallet_provider_id = session["wallet_provider_id"]
+    challenge = session["challenge_wir"]
+
+    crypto_hardware_key_tag = wallet_entity.context.crypto_hardware_key.kid
+
+    request_args = {
+        "challenge": challenge,
+        # "crypto_hardware_key_tag": crypto_hardware_key_tag,
+        "crypto_hardware_key": wallet_entity.context.crypto_hardware_key.serialize()
+    }
+
+    resp = wallet_entity.request_key_attestation(wallet_provider_id, challenge)
+
+    return render_template('key_attestation.html', key_attestation_response=resp,
+                           key_attestation_request=request_args,
+                           crypto_hardware_key_tag=crypto_hardware_key_tag)
+
+
+@entity.route('/wallet_registration', methods=['GET'])
+def registration():
+    wallet_entity = current_app.server["wallet"]
+    wallet_provider_id = session["wallet_provider_id"]
+    challenge = session["challenge_wir"]
+
+    resp = wallet_entity.request_registration(wallet_provider_id, challenge)
+
+    # only for display
+    _init_reg_info = wallet_entity.context.init_reg[challenge]
+    request_args = {
+        "challenge": challenge,
+        "key_attestation": as_unicode(_init_reg_info["key_attestation"]),
+        "hardware_key_tag": _init_reg_info["crypto_hardware_key_tag"]
+    }
+
+    return render_template('wallet_registration.html', registration_response=resp,
+                           registration_request=request_args)
+
 
 @entity.route('/wallet_provider')
 def wallet_provider():
@@ -67,6 +133,21 @@ def wallet_provider():
                            metadata=trust_chain[0].metadata)
 
 
+@entity.route('/integrity')
+def integrity():
+    # This is where the attestation request is constructed and sent to the Wallet Provider.
+    # And where the response is unpacked.
+    wallet_entity = current_app.server["wallet"]
+    wallet_provider_id = session["wallet_provider_id"]
+    challenge = session["challenge_wai"]
+
+    resp, ephemeral_key, hardware_signature = wallet_entity.request_integrity_assertion(wallet_provider_id, challenge)
+    session["ephemeral_key_tag"] = ephemeral_key.kid
+    wallet_entity.context.wia_flow[ephemeral_key.kid]["integrity_assertion"] = resp["integrity_assertion"]
+    wallet_entity.context.wia_flow[ephemeral_key.kid]["hardware_signature"] = hardware_signature
+
+    return render_template('integrity.html', integrity_response=resp)
+
 
 @entity.route('/wallet_attestation_issuance')
 def wai():
@@ -79,20 +160,17 @@ def wir():
     # And where the response is unpacked.
     wallet_entity = current_app.server["wallet"]
     wallet_provider_id = session["wallet_provider_id"]
-
-    ephemeral_key = wallet_entity.mint_new_key()
-    session["ephemeral_key_tag"] = ephemeral_key.kid
-    wallet_entity.context.wia_flow[ephemeral_key.kid]["ephemeral_key_tag"] = ephemeral_key.kid
-
-    _wia_info = wallet_entity.context.wia_flow[ephemeral_key.kid]
+    challenge = session["challenge_wai"]
+    _wia_info = wallet_entity.context.wia_flow[session["ephemeral_key_tag"]]
+    integrity_assertion = _wia_info["integrity_assertion"]
+    hardware_signature = _wia_info["hardware_signature"]
+    hardware_key_tag = wallet_entity.context.crypto_hardware_key.kid
 
     wallet_instance_attestation, war_payload = wallet_entity.request_wallet_instance_attestation(
-        wallet_provider_id,
-        challenge="__not__applicable__",
-        ephemeral_key_tag=ephemeral_key.kid,
-        integrity_assertion="__not__applicable__",
-        hardware_signature="__not__applicable__",
-        crypto_hardware_key_tag="__not__applicable__"
+        wallet_provider_id, challenge, session["ephemeral_key_tag"],
+        integrity_assertion=integrity_assertion,
+        hardware_signature=hardware_signature,
+        crypto_hardware_key_tag=hardware_key_tag
     )
 
     _wia_info["wallet_instance_attestation"] = wallet_instance_attestation
