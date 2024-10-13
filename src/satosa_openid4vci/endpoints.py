@@ -151,12 +151,12 @@ class Openid4VCIEndpoints(Openid4VCIUtils):
             _iss = _jws.jwt.payload()["iss"]
             if _iss not in _keyjar:
                 logger.debug(f"Unregistered client '{_iss}'")
-                # do automatic registration
-
-            _jwt = JWT(key_jar=_keyjar)
-            _request = _jwt.unpack(context.request["request"])
-            del context.request["request"]
-            context.request.update(_request)
+                # do automatic/semi-automatic registration
+            else:
+                _jwt = JWT(key_jar=_keyjar)
+                _request = _jwt.unpack(context.request["request"])
+                del context.request["request"]
+                context.request.update(_request)
 
         logger.debug(f"request: {context.request}")
 
