@@ -84,6 +84,7 @@ config:
                 attest_jwt_client_auth: openid4v.openid_credential_issuer.client_authn.ClientAuthenticationAttestation
                 dpop_client_auth: idpyoidc.server.oauth2.add_on.dpop.DPoPClientAuth
                 request_param: idpyoidc.server.client_authn.RequestParam
+                pushed_authz: idpyoidc.server.client_authn.PushedAuthorization
               httpc_params:
                 verify: false
                 timeout: 12
@@ -381,4 +382,15 @@ config:
                   kwargs:
                     client_authn_method:
                       - dpop_client_auth
+                    credential_constructor:
+                      PersonIdentificationData:
+                        class:
+                          openid4v.openid_credential_issuer.credential_constructor.authentic_source.CredentialConstructor
+                        kwargs:
+                          url: http://vc-interop-1.sunet.se/api/v1/credential
+                          jwks_url: http://vc-interop-1.sunet.se/api/v1/credential/.well-known/jwks
+                          body:
+                            authentic_source: SUNET
+                            document_type: PDA1
+                            credential_type: sdjwt
               template_dir: template

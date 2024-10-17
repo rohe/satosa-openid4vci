@@ -137,7 +137,8 @@ class Openid4VCIEndpoints(Openid4VCIUtils):
         return self.send_response(response)
 
     def pushed_authorization_endpoint(self, context: ExtendedContext):
-        _env = self._request_setup(context, "oauth_authorization_server", "pushed_authorization")
+        _env = self._request_setup(context, "oauth_authorization_server",
+                                   "pushed_authorization")
         _env["entity_type"].persistence.restore_state(context.request, _env["http_info"])
 
         _env["endpoint"].request_format = "dict"
