@@ -84,6 +84,7 @@ config:
                 attest_jwt_client_auth: openid4v.openid_credential_issuer.client_authn.ClientAuthenticationAttestation
                 dpop_client_auth: idpyoidc.server.oauth2.add_on.dpop.DPoPClientAuth
                 request_param: idpyoidc.server.client_authn.RequestParam
+                pushed_authz: idpyoidc.server.client_authn.PushedAuthorization
               httpc_params:
                 verify: false
                 timeout: 12

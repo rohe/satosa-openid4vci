@@ -2,10 +2,8 @@ import logging
 
 from cryptojwt import JWT
 from cryptojwt.jws.jws import factory
-from idpyoidc.message import Message
 from openid4v.message import AuthorizationDetail
 from openid4v.message import AuthorizationRequest
-from openid4v.message import auth_detail_list_deser
 from satosa.context import Context
 from satosa_idpyop.core import ExtendedContext
 from satosa_idpyop.core.response import JWSResponse
@@ -139,24 +137,38 @@ class Openid4VCIEndpoints(Openid4VCIUtils):
         return self.send_response(response)
 
     def pushed_authorization_endpoint(self, context: ExtendedContext):
-        _env = self._request_setup(context, "oauth_authorization_server", "pushed_authorization")
+        _env = self._request_setup(context, "oauth_authorization_server",
+                                   "pushed_authorization")
         _env["entity_type"].persistence.restore_state(context.request, _env["http_info"])
 
         _env["endpoint"].request_format = "dict"
         _env["endpoint"].request_cls = AuthorizationRequest
 
+        logger.debug(f"Request: {context.request}")
         if "request" in context.request:
             _keyjar = _env["endpoint"].upstream_get("attribute", "keyjar")
             _jws = factory(context.request["request"])
-            _iss = _jws.jwt.payload()["iss"]
-            if _iss not in _keyjar:
-                logger.debug(f"Unregistered client '{_iss}'")
-                # do automatic registration
-
-            _jwt = JWT(key_jar=_keyjar)
-            _request = _jwt.unpack(context.request["request"])
-            del context.request["request"]
-            context.request.update(_request)
+            if not _jws:
+                logger.warning("request not a signed JWT")
+                # raise ValueError("RequestObject not a signed JWT")
+                response = JsonResponse(
+                    {
+                        "error": "invalid_request",
+                        "error_description": f"Request object not a signed JWT",
+                    },
+                    status="403",
+                )
+                return self.send_response(response)
+            else:
+                _iss = _jws.jwt.payload()["iss"]
+                if _iss not in _keyjar:
+                    logger.debug(f"Unregistered client '{_iss}'")
+                    # do automatic/semi-automatic registration
+                else:
+                    _jwt = JWT(key_jar=_keyjar)
+                    _request = _jwt.unpack(context.request["request"])
+                    del context.request["request"]
+                    context.request.update(_request)
 
         logger.debug(f"request: {context.request}")
 

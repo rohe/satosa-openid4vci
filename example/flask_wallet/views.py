@@ -113,7 +113,7 @@ def picking_pid_issuer():
     ta_id = list(current_app.federation_entity.trust_anchors.keys())[0]
     list_resp = current_app.federation_entity.do_request('list', entity_id=ta_id)
 
-    # print(f"Subordinates to TA: {list_resp}")
+    logger.debug(f"Subordinates to TA: {list_resp}")
     for entity_id in list_resp:
         # first find out if the entity is an openid credential issuer
         _metadata = current_app.federation_entity.get_verified_metadata(entity_id)
@@ -126,6 +126,7 @@ def picking_pid_issuer():
                                                 entity_type="openid_credential_issuer"))
 
     credential_issuers = res
+    logger.debug(f"Credential Issuers: {credential_issuers}")
 
     _oci = {}
     credential_type = "PersonIdentificationData"
@@ -138,6 +139,7 @@ def picking_pid_issuer():
                 break
 
     pid_issuers = list(_oci.keys())
+    logger.debug(f"PID Issuers: {pid_issuers}")
 
     pid_issuer_to_use = []
     tmi = {}
@@ -157,7 +159,9 @@ def picking_pid_issuer():
                 else:
                     logger.warning("Could not verify trust mark")
 
-    session["pid_issuer_to_use"] = pid_issuers[0]
+    logger.debug(f"PID Issuer to use: {pid_issuer_to_use}")
+
+    session["pid_issuer_to_use"] = pid_issuer_to_use[0]
 
     return render_template('picking_pid_issuer.html',
                            credential_issuers=credential_issuers,
