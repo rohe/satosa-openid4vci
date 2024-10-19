@@ -126,7 +126,7 @@ class Openid4VCIEndpoints(Openid4VCIUtils):
         :return: HTTP response to the client
         """
         logger.debug("At the Token Endpoint")
-
+        logger.debug(f"Request: {context.request}")
         response = self.endpoint_wrapper["token"](context)
 
         return self.send_response(response)
@@ -161,10 +161,10 @@ class Openid4VCIEndpoints(Openid4VCIUtils):
         logger.debug(f"request: {context.request}")
 
         # This is not how it should be done, but it has to be done.
-        if "authorization_details"  in context.request:
+        if "authorization_details" in context.request:
             logger.debug("Need to deal with 'authorization_details'")
             if context.request["authorization_details"].startswith("[") and context.request[
-                    "authorization_details"].endswith("]"):
+                "authorization_details"].endswith("]"):
                 _ads = context.request["authorization_details"][1:-1].split(",")
                 _list = []
                 for _url_ad in _ads:

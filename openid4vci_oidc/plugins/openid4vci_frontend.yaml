@@ -294,7 +294,6 @@ config:
                   credential_type_to_claims:
                     PersonIdentificationData:
                       - email
-                      - address.streetaddress
                       - sub
                       - name
                       - family_name
@@ -381,4 +380,14 @@ config:
                   kwargs:
                     client_authn_method:
                       - dpop_client_auth
+                    credential_constructor:
+                      PersonIdentificationData:
+                        class: openid4v.openid_credential_issuer.credential_constructor.authentic_source.CredentialConstructor
+                        kwargs:
+                            url: http://vc-interop-1.sunet.se/api/v1/credential
+                            jwks_url: http://vc-interop-1.sunet.se/api/v1/credential/publickeys
+                            body:
+                              authentic_source": sunet2
+                              document_type": PDA1
+                              document_id": document_id_7
               template_dir: template
