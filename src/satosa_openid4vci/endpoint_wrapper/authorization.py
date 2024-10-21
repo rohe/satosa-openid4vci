@@ -1,14 +1,11 @@
 import base64
-import json
+from datetime import datetime
 import logging
 import os
-from datetime import datetime
 from urllib.parse import parse_qs
 from urllib.parse import urlencode
 from urllib.parse import urlparse
 
-from openid4v.message import AuthorizationDetail
-import satosa
 from idpyoidc.message.oauth2 import AuthorizationErrorResponse
 from idpyoidc.message.oauth2 import AuthorizationResponse
 from idpyoidc.message.oauth2 import ResponseMessage
@@ -16,6 +13,7 @@ from idpyoidc.node import topmost_unit
 from idpyoidc.server import Endpoint
 from idpyoidc.server.authn_event import create_authn_event
 from openid4v.message import AuthorizationRequest
+import satosa
 from satosa_idpyop.core import ExtendedContext
 from satosa_idpyop.core.claims import combine_claim_values
 from satosa_idpyop.core.response import JsonResponse
@@ -159,7 +157,7 @@ class AuthorizationEndpointWrapper(EndPointWrapper):
         http_info = get_http_info(context)
         oidc_req = context.state[self.name]["oidc_request"]
         endpoint = self.app.server.endpoint["authorization"]
-        _entity_type= self.upstream_get("unit")
+        _entity_type = self.upstream_get("unit")
         _entity_type.persistence.restore_client_info(oidc_req["client_id"])
 
         # not using self._parse_request cause of "Missing required attribute 'response_type'"

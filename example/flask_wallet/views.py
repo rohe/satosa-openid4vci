@@ -183,7 +183,7 @@ def authz():
     wallet_entity = current_app.server["wallet"]
 
     b64hash = hash_func(pid_issuer)
-    _redirect_uri = f"https://127.0.0.1:5005/authz_cb/{b64hash}"
+    _redirect_uri = f"{parent.entity_id}/authz_cb/{b64hash}"
     session["redirect_uri"] = _redirect_uri
 
     _key_tag = session["ephemeral_key_tag"]
