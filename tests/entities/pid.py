@@ -56,6 +56,12 @@ def main(entity_id: str,
                 'class': ServerEntity,
                 'kwargs': {
                     'config': {
+                        "client_authn_methods": {
+                            "client_secret_basic": ClientSecretBasic,
+                            "client_secret_post": ClientSecretPost,
+                            "client_assertion": ClientAuthenticationAttestation,
+                            "dpop_client_auth": DPoPClientAuth
+                        },
                         "httpc_params": {"verify": False, "timeout": 1},
                         "preference": {
                             "grant_types_supported": [
@@ -119,6 +125,16 @@ def main(entity_id: str,
                                     "request_parameter_supported": True,
                                     "request_uri_parameter_supported": True
                                     # "client_authn_method": ["client_assertion"]
+                                },
+                            },
+                            "pushed_authorization": {
+                                "path": "pushed_authorization",
+                                "class":
+                                    "idpyoidc.server.oauth2.pushed_authorization.PushedAuthorization",
+                                "kwargs": {
+                                    "client_authn_method": [
+                                        "client_assertion",
+                                    ]
                                 },
                             },
                         },
@@ -194,18 +210,8 @@ def main(entity_id: str,
                                     "client_authn_method": [
                                         "dpop_client_auth"
                                     ]
-                                },
-                            },
-                            "pushed_authorization": {
-                                "path": "pushed_authorization",
-                                "class":
-                                    "idpyoidc.server.oauth2.pushed_authorization.PushedAuthorization",
-                                "kwargs": {
-                                    "client_authn_method": [
-                                        "client_assertion",
-                                    ]
-                                },
-                            },
+                                }
+                            }
                         },
                         "add_ons": {
                             "dpop": {
@@ -217,13 +223,13 @@ def main(entity_id: str,
                             }
                         },
                         'preference': {
-                            "credentials_supported": [
-                                {
+                            "credential_configurations_supported": {
+                                "PersonIdentificationData": {
+                                    "type": "openid_credential",
                                     "format": "vc+sd-jwt",
                                     "id": "eudiw.pid.se",
                                     "cryptographic_binding_methods_supported": ["jwk"],
-                                    "cryptographic_suites_supported": ["RS256", "RS512", "ES256",
-                                                                       "ES512"],
+                                    "cryptographic_suites_supported": ["RS256", "RS512", "ES256", "ES512"],
                                     "display": [
                                         {
                                             "name": "Example Swedish PID Provider",
@@ -290,7 +296,7 @@ def main(entity_id: str,
                                         }
                                     }
                                 }
-                            ],
+                            },
                             "attribute_disclosure": {
                                 "": ["given_name",
                                      "family_name",

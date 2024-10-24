@@ -134,7 +134,7 @@ class TestFrontEnd():
             # collect metadata for PID issuer
             pid_issuer_metadata = self.wallet["federation_entity"].get_verified_metadata(pid_issuer)
 
-        actor.context.provider_info = pid_issuer_metadata['openid_credential_issuer']
+        actor.context.provider_info = pid_issuer_metadata['oauth_authorization_server']
 
         # _service = actor.get_service("authorization")
         # _service.certificate_issuer_id = pid_issuer
@@ -158,19 +158,8 @@ class TestFrontEnd():
             'client_id': client_id,
             'redirect_uri': 'eudiw://start.wallet.example.org',
         }
-
-        # Create the client attestation
-        _cls = ClientAuthenticationAttestation()
-        _cls.construct(
-            request=authz_request,
-            thumbprint=ephemeral_key.kid,
-            wallet_instance_attestation=wia,
-            audience=pid_issuer,
-            signing_key=self.wallet["wallet"].keyjar.get_signing_key(issuer_id=ephemeral_key.kid)[0]
-        )
-
         _state = rndstr()
-        kwargs = {"state": _state}
+        kwargs = {"state": _state, "attestation": wia}
 
         _service = actor.get_service("authorization")
         _service.certificate_issuer_id = pid_issuer
@@ -182,7 +171,7 @@ class TestFrontEnd():
 
         # ---- Switch to the server side. The PID issuer
 
-        endpoint = self.entity["pid_issuer"]["openid_credential_issuer"].get_endpoint(
+        endpoint = self.entity["pid_issuer"]["oauth_authorization_server"].get_endpoint(
             "pushed_authorization")
 
         where_and_what = create_trust_chain_messages(self.entity["wallet_provider"],
@@ -193,7 +182,8 @@ class TestFrontEnd():
                 rsps.add("GET", _url, body=_jwks,
                          adding_headers={"Content-Type": "application/json"}, status=200)
 
-            _parsed_req = endpoint.parse_request(request=req_info["request"])
+            _parsed_req = endpoint.parse_request(request=req_info["request"],
+                                                 http_info={"headers": req_info["headers"]})
 
         _pa_response = endpoint.process_request(_parsed_req)
         assert _pa_response
@@ -201,14 +191,13 @@ class TestFrontEnd():
         # Now for the authz request to the authz endpoint
 
         request = {
-            "request_uri": _pa_response["http_response"]["request_uri"],
+            "request_uri": _pa_response["response_args"]["request_uri"],
             "redirect_uri": authz_request["redirect_uri"],
             "response_type": ["code"],
             'client_id': client_id
         }
 
-        endpoint = self.entity["pid_issuer"]["openid_credential_issuer"].get_endpoint(
-            "authorization")
+        endpoint = self.entity["pid_issuer"]["oauth_authorization_server"].get_endpoint("authorization")
 
         _auth_request = endpoint.parse_request(request)
         _auth_response = endpoint.process_request(_auth_request)
@@ -224,22 +213,22 @@ class TestFrontEnd():
             'client_id': client_id,
             'state': _state,
         }
-        _cls = ClientAuthenticationAttestation()
-        _cls.construct(
-            request=token_request,
-            thumbprint=srv.thumbprint_in_cnf_jwk,
-            wallet_instance_attestation=wia,
-            audience=pid_issuer,
-            signing_key=self.wallet["wallet"].keyjar.get_signing_key(
-                issuer_id=srv.thumbprint_in_cnf_jwk)[0]
-        )
+        # _cls = ClientAuthenticationAttestation()
+        # _cls.construct(
+        #     request=token_request,
+        #     thumbprint=srv.thumbprint_in_cnf_jwk,
+        #     wallet_instance_attestation=wia,
+        #     audience=pid_issuer,
+        #     signing_key=self.wallet["wallet"].keyjar.get_signing_key(
+        #         issuer_id=srv.thumbprint_in_cnf_jwk)[0]
+        # )
 
         _service = actor.get_service("accesstoken")
         req_info = _service.get_request_parameters(token_request, **kwargs)
 
         # ---- Switch to the server side. The PID issuer
 
-        endpoint = self.entity["pid_issuer"]["openid_credential_issuer"].get_endpoint("token")
+        endpoint = self.entity["pid_issuer"]["oauth_authorization_server"].get_endpoint("token")
         _http_info = {
             "headers": req_info["headers"],
             "method": req_info["method"],
