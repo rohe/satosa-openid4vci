@@ -61,7 +61,12 @@ class Openid4VCIEndpoints(Openid4VCIUtils):
         endpoint = _guise.get_endpoint(endpoint)
         logger.debug(20 * "=" + f'Request at the "{endpoint.name}" endpoint' + 20 * "-")
         logger.debug(f"endpoint={endpoint}")
-        http_info = get_http_info(context)
+        try:
+            http_info = get_http_info(context)
+        except ValueError as err:
+            logger.warning(f"In get_http_info: {err}")
+            http_info = {}
+
         logger.debug(f"http_info: {http_info}")
 
         return {

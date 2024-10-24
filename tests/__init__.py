@@ -180,9 +180,9 @@ def federation_setup():
         }
     }
     try:
-        trust_anchor = execute_function('entities.ta.main', **kwargs)
+        trust_anchor = execute_function('entities.trust_anchor.main', **kwargs)
     except ModuleNotFoundError:
-        trust_anchor = execute_function('tests.entities.ta.main', **kwargs)
+        trust_anchor = execute_function('tests.entities.trust_anchor.main', **kwargs)
 
     trust_anchors = {TA_ID: trust_anchor.keyjar.export_jwks()}
     entity["trust_anchor"] = trust_anchor

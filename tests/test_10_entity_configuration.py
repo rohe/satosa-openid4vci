@@ -46,7 +46,11 @@ class TestFrontEnd():
 
     @pytest.fixture
     def frontend(self):
+        _ta = self.entity["trust_anchor"]
+        trust_anchor_def = {_ta.entity_id: _ta.keyjar.export_jwks()}
+
         frontend_config = load_yaml_config(full_path("satosa_conf.yaml"))
+        frontend_config["op"]["server_info"]["trust_anchors"] = trust_anchor_def
 
         frontend = OpenID4VCIFrontend(auth_req_callback_func, INTERNAL_ATTRIBUTES,
                                       frontend_config, BASE_URL, "openid4vci_frontend")
@@ -68,14 +72,37 @@ class TestFrontEnd():
         _payload = _jws.jwt.payload()
         assert _payload
         assert _payload["authority_hints"] == ["https://ta.example.com"]
-        assert set(_payload["metadata"].keys()) == {'federation_entity', 'openid_credential_issuer'}
+        assert set(_payload["metadata"].keys()) == {'federation_entity', 'openid_credential_issuer',
+                                                    'oauth_authorization_server'}
 
     def test_authorization_endpoint(self):
         wallet_provider = self.entity["wallet_provider"]["wallet_provider"]
 
         # The WIA request by the Wallet
-        srv = self.wallet["wallet"].get_service("wallet_instance_attestation")
-        req = srv.construct(request_args={"aud": wallet_provider.entity_id, "nonce": "NONCE"})
+        service = self.wallet["wallet"].get_service("wallet_instance_attestation")
+        ephemeral_key = service.upstream_get("unit").mint_ephemeral_key()
+        req = service.construct(
+            request_args={
+                "aud": wallet_provider.entity_id, "nonce": "NONCE",
+                "challenge": "__not__applicable__",
+                "integrity_assertion": "__not__applicable__",
+                "hardware_signature": "__not__applicable__",
+                "hardware_key_tag": "__not__applicable__",
+                "vp_formats_supported": {
+                    "jwt_vp_json": {
+                        "alg_values_supported": [
+                            "ES256"
+                        ]
+                    },
+                    "jwt_vc_json": {
+                        "alg_values_supported": [
+                            "ES256"
+                        ]
+                    }
+                }
+            },
+            ephemeral_key=ephemeral_key,
+        )
         assert req["assertion"]
         # Now get the wallet provider to sign
 
@@ -84,8 +111,8 @@ class TestFrontEnd():
         response = endpoint.process_request(parsed_request)
         wia = response["response_args"]["assertion"]
 
-        client_id = srv.thumbprint_in_cnf_jwk
-        srv.wallet_instance_attestation[client_id] = wia
+        client_id = ephemeral_key.kid
+        service.wallet_instance_attestation[client_id] = wia
 
         # done with the wallet provider now for the PID issuer
 
@@ -136,11 +163,10 @@ class TestFrontEnd():
         _cls = ClientAuthenticationAttestation()
         _cls.construct(
             request=authz_request,
-            thumbprint=srv.thumbprint_in_cnf_jwk,
+            thumbprint=ephemeral_key.kid,
             wallet_instance_attestation=wia,
             audience=pid_issuer,
-            signing_key=self.wallet["wallet"].keyjar.get_signing_key(
-                issuer_id=srv.thumbprint_in_cnf_jwk)[0]
+            signing_key=self.wallet["wallet"].keyjar.get_signing_key(issuer_id=ephemeral_key.kid)[0]
         )
 
         _state = rndstr()
@@ -149,18 +175,10 @@ class TestFrontEnd():
         _service = actor.get_service("authorization")
         _service.certificate_issuer_id = pid_issuer
 
-        # where_and_what = create_trust_chain_messages(self.entity["pid_issuer"],
-        #                                              self.entity["trust_anchor"])
-        #
-        # with responses.RequestsMock() as rsps:
-        #     for _url, _jwks in where_and_what.items():
-        #         rsps.add("GET", _url, body=_jwks,
-        #                  adding_headers={"Content-Type": "application/json"}, status=200)
-
         req_info = _service.get_request_parameters(authz_request, **kwargs)
 
         assert req_info
-        assert set(req_info.keys()) == {"method", "request", "url"}
+        assert set(req_info.keys()) == {"method", "request", "url", "headers"}
 
         # ---- Switch to the server side. The PID issuer
 

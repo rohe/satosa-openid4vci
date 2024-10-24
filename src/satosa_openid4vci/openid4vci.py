@@ -56,9 +56,12 @@ class OpenID4VCIFrontend(FrontendModule, Openid4VCIEndpoints):
         Openid4VCIEndpoints.__init__(self, self.app, auth_req_callback_func, self.converter)
         # registered endpoints will be filled by self.register_endpoints
         self.endpoints = None
-        persistence = getattr(self.app.federation_entity, "persistence", None)
-        if persistence:
-            persistence.store_state()
+        federation_persistence = getattr(self.app.federation_entity, "persistence", None)
+        if federation_persistence:
+            federation_persistence.store_state()
+        oauth_persistence = getattr(self.app.oauth_authorization_server, "persistence", None)
+        if oauth_persistence:
+            oauth_persistence.store_state()
 
     def oci_jwks_endpoint(self, context: Context):
         """
