@@ -59,8 +59,8 @@ class Openid4VCIEndpoints(Openid4VCIUtils):
     def _request_setup(self, context: ExtendedContext, entity_type: str, endpoint: str):
         _guise = self.app.server[entity_type]
         endpoint = _guise.get_endpoint(endpoint)
-        logger.debug(20 * "=" + f'Request at the "{endpoint.name}" endpoint' + 20 * "-")
-        logger.debug(f"endpoint={endpoint}")
+        msg = 20 * "=" + f'Request at the "{endpoint.name}" endpoint' + 20 * "="
+        logger.debug(msg)
         try:
             http_info = get_http_info(context)
         except ValueError as err:
@@ -105,7 +105,7 @@ class Openid4VCIEndpoints(Openid4VCIUtils):
         Checks client_id and handles the authorization request
         """
         logger.debug("At the Authorization Endpoint")
-        logger.debug(20 * "=" + f'Request at the "Authorization" endpoint' + 20 * "-")
+        logger.debug(20 * "=" + f'Request at the "Authorization" endpoint' + 20 * "=")
         _guise = self.app.server['oauth_authorization_server']
         _guise.persistence.restore_pushed_authorization()
         _fed_entity = self.app.server["federation_entity"]
@@ -135,7 +135,7 @@ class Openid4VCIEndpoints(Openid4VCIUtils):
         return self.send_response(response)
 
     def credential_endpoint(self, context: ExtendedContext):
-        logger.debug("At the Credential Endpoint")
+        logger.debug(20 * "=" , "At the Credential Endpoint", 20 * "=")
 
         response = self.endpoint_wrapper["credential"](context)
 
