@@ -132,6 +132,8 @@ config:
                               use:
                                 - enc
                               kid: salt
+                          private_path: private/code_jwks.json
+                          read_only: false
                         iterations: 1
                 token:
                   class: idpyoidc.server.token.jwt_token.JWTToken
