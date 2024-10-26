@@ -126,7 +126,8 @@ config:
                               type: OCT
                               use:
                                 - enc
-                              kid: password
+                              kid: key
+                              bytes: 32
                             -
                               type: OCT
                               use:
