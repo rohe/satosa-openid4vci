@@ -28,9 +28,15 @@ class CredentialEndpointWrapper(EndPointWrapper):
             return proc_req
 
         logger.debug(f"Process result: {proc_req}")
-        if isinstance(proc_req["response_args"], Message):
-            response = JsonResponse(proc_req["response_args"].to_dict())
+        if "response_args" in proc_req:
+            if isinstance(proc_req["response_args"], Message):
+                response = JsonResponse(proc_req["response_args"].to_dict())
+            else:
+                response = JsonResponse(proc_req["response_args"])
+        elif "error" in proc_req:
+            response = JsonResponse(proc_req["error"])
         else:
-            response = JsonResponse(proc_req["response_args"])
+            response = proc_req
+
         self.clean_up()
         return response

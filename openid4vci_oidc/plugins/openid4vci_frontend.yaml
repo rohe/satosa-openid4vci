@@ -391,7 +391,8 @@ config:
                             url: http://vc-interop-1.sunet.se/api/v1/credential
                             jwks_url: http://vc-interop-1.sunet.se/api/v1/credential/.well-known/jwks
                             body:
-                              authentic_source": sunet2
-                              document_type": PDA1
-                              document_id": document_id_7
+                              authentic_source: SUNET
+                              credential_type: sdjwt
+                              document_type: PDA1
+                              document_id: document_id_7
               template_dir: template
