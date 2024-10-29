@@ -10,7 +10,6 @@ from satosa_idpyop.core.response import JWSResponse
 from satosa_idpyop.core.response import JsonResponse
 from satosa_idpyop.endpoint_wrapper.token import TokenEndpointWrapper
 from satosa_idpyop.utils import get_http_info
-
 from satosa_openid4vci.endpoint_wrapper.authorization import AuthorizationEndpointWrapper
 from satosa_openid4vci.endpoint_wrapper.credential import CredentialEndpointWrapper
 from satosa_openid4vci.utils import Openid4VCIUtils
@@ -127,7 +126,7 @@ class Openid4VCIEndpoints(Openid4VCIUtils):
         :param context: the current context
         :return: HTTP response to the client
         """
-        logger.debug("At the Token Endpoint")
+        logger.debug(20 * "*" + "At the Token Endpoint" + 20 * "*")
         logger.debug(f"Request: {context.request}")
         response = self.endpoint_wrapper["token"](context)
 

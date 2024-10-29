@@ -213,8 +213,10 @@ class AuthorizationEndpointWrapper(EndPointWrapper):
             )
         except ValueError as excp:  # pragma: no cover
             # TODO - cover with unit test and add some satosa logging ...
+            logger.exception('ValueError')
             return self.handle_error(excp=excp)
         except Exception as excp:  # pragma: no cover
+            logger.exception('Unknown error')
             return self.handle_error(excp=excp)
 
         if isinstance(_args, ResponseMessage) and "error" in _args:  # pragma: no cover

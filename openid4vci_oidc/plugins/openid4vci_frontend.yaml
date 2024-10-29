@@ -120,21 +120,8 @@ config:
                   kwargs:
                     crypt_conf:
                       kwargs:
-                        keys:
-                          key_defs:
-                            -
-                              type: OCT
-                              use:
-                                - enc
-                              kid: key
-                              bytes: 32
-                            -
-                              type: OCT
-                              use:
-                                - enc
-                              kid: salt
-                          private_path: private/code_jwks.json
-                          read_only: false
+                        key: "0987654321abcdefghijklmnop...---"
+                        salt: "abcdefghijklmnop"
                         iterations: 1
                 token:
                   class: idpyoidc.server.token.jwt_token.JWTToken

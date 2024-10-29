@@ -105,7 +105,7 @@ class Openid4VCIUtils(object):
                      excp: Optional[Exception] = None,
                      status: Optional[str] = "403"
                      ):  # pragma: no cover
-        _msg = f'Something went wrong ... {excp or ""}'
+        _msg = f'[Openid4VCIUtils] Something went wrong ... {excp or ""}'
         msg = msg or _msg
         logger.error(msg)
         response = JsonResponse(msg, status=status)

@@ -200,8 +200,10 @@ class OpenID4VCIFrontend(FrontendModule, Openid4VCIEndpoints):
             )
         except ValueError as excp:  # pragma: no cover
             # TODO - cover with unit test and add some satosa logging ...
+            logger.exception('ValueError')
             return self.handle_error(excp=excp)
         except Exception as excp:  # pragma: no cover
+            logger.exception('Other error')
             return self.handle_error(excp=excp)
 
         logger.debug(f"authz_part2 args: {_args}")

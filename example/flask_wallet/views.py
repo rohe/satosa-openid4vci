@@ -324,6 +324,9 @@ def credential():
     req_info = _service.get_request_parameters(_request_args, access_token=_req_args["access_token"],
                                                state=_wia_flow["state"])
 
+    # Issuer Fix
+    consumer.keyjar.import_jwks(consumer.keyjar.export_jwks(issuer_id="https://127.0.0.1:8080"), "https://vc-interop-1.sunet.se")
+
     resp = consumer.do_request(
         "credential",
         request_args=_request_args,
@@ -332,14 +335,10 @@ def credential():
         endpoint=trust_chain.metadata['openid_credential_issuer']['credential_endpoint']
     )
 
-    cresp = resp["credential"]
-    _msg = CredentialResponse().from_json(cresp)
-    _msg.verify(keyjar=consumer.context.keyjar)
-
     del req_info["request"]
     return render_template('credential.html', request=req_info,
-                           response=resp, signed_jwt=_msg["credentials"][0]["credential"],
-                           display=_msg[verified_claim_name("credential")])
+                           response=resp, signed_jwt=resp["credentials"][0]["credential"],
+                           display=resp[verified_claim_name("credential")])
 
 
 @entity.errorhandler(werkzeug.exceptions.BadRequest)
