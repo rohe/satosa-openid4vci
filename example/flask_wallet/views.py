@@ -2,8 +2,7 @@ import logging
 
 import werkzeug
 from cryptojwt import JWT
-from cryptojwt.jwk.ec import new_ec_key
-from cryptojwt.utils import b64e, as_unicode
+from cryptojwt.utils import b64e
 from fedservice.entity import get_verified_trust_chains
 from flask import Blueprint
 from flask import current_app
@@ -12,10 +11,11 @@ from flask import render_template
 from flask import request
 from flask import session
 from flask.helpers import send_from_directory
+from idpyoidc import verified_claim_name
 from idpyoidc.client.defaults import CC_METHOD
 from idpyoidc.util import rndstr
-from idpysdjwt.verifier import display_sdjwt
 from openid4v.message import WalletInstanceAttestationJWT
+from openid4v.message import CredentialResponse
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +53,6 @@ def send_image(path):
     return send_from_directory('img', path)
 
 
-
 @entity.route('/wallet_provider')
 def wallet_provider():
     wp_id = request.args["entity_id"]
@@ -65,7 +64,6 @@ def wallet_provider():
     return render_template('wallet_provider.html',
                            trust_chain_path=trust_chain[0].iss_path,
                            metadata=trust_chain[0].metadata)
-
 
 
 @entity.route('/wallet_attestation_issuance')
@@ -311,7 +309,7 @@ def credential():
     wallet_entity.keyjar.import_jwks(issuer_id=consumer.context.issuer,
                                      jwks=trust_chain.metadata["openid_credential_issuer"]["jwks"])
 
-    #consumer.context.keyjar = wallet_entity.keyjar
+    # consumer.context.keyjar = wallet_entity.keyjar
     consumer.keyjar = wallet_entity.keyjar
     _key_tag = session["ephemeral_key_tag"]
     _wia_flow = wallet_entity.context.wia_flow[_key_tag]
@@ -334,11 +332,14 @@ def credential():
         endpoint=trust_chain.metadata['openid_credential_issuer']['credential_endpoint']
     )
 
-    _jwt, _displ = display_sdjwt(resp["credential"])
+    cresp = resp["credential"]
+    _msg = CredentialResponse().from_json(cresp)
+    _msg.verify(keyjar=consumer.context.keyjar)
+
     del req_info["request"]
     return render_template('credential.html', request=req_info,
-                           response=resp, signed_jwt=_jwt,
-                           display=_displ)
+                           response=resp, signed_jwt=_msg["credentials"][0]["credential"],
+                           display=_msg[verified_claim_name("credential")])
 
 
 @entity.errorhandler(werkzeug.exceptions.BadRequest)
