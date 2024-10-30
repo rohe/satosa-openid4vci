@@ -9,7 +9,7 @@ def storage_names(directory):
         if fname.endswith('.lock'):
             continue
         else:
-            print(base64.b64decode(fname))
+            print(f"{fname} -> {base64.b64decode(fname)}")
 
 if __name__ == "__main__":
     dir = sys.argv[1]
