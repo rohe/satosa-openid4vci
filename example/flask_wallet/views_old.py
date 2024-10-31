@@ -1,14 +1,10 @@
-import base64
-import hashlib
-import json
 import logging
 
-import werkzeug
 from cryptojwt import JWT
-from cryptojwt.jwk.ec import new_ec_key
-from cryptojwt.jws.dsa import ECDSASigner
-from cryptojwt.utils import b64e, as_unicode, as_bytes
+from cryptojwt.utils import as_unicode
+from cryptojwt.utils import b64e
 from fedservice.entity import get_verified_trust_chains
+from fedservice.keyjar import import_jwks
 from flask import Blueprint
 from flask import current_app
 from flask import redirect
@@ -20,6 +16,7 @@ from idpyoidc.client.defaults import CC_METHOD
 from idpyoidc.util import rndstr
 from idpysdjwt.verifier import display_sdjwt
 from openid4v.message import WalletInstanceAttestationJWT
+import werkzeug
 
 logger = logging.getLogger(__name__)
 
@@ -91,7 +88,8 @@ def attest_key():
 
     request_args = {
         "challenge": challenge,
-        "crypto_hardware_key_tag": wallet_entity.context.init_reg[challenge]["crypto_hardware_key_tag"]
+        "crypto_hardware_key_tag": wallet_entity.context.init_reg[challenge][
+            "crypto_hardware_key_tag"]
     }
 
     return render_template('key_attestation.html', key_attestation_response=resp,
@@ -320,7 +318,8 @@ def token():
     _key_tag = session["ephemeral_key_tag"]
     _wia_flow = wallet_entity.context.wia_flow[_key_tag]
 
-    _req_args = consumer.context.cstate.get_set(_wia_flow["state"], claim=["redirect_uri", "code", "nonce"])
+    _req_args = consumer.context.cstate.get_set(_wia_flow["state"],
+                                                claim=["redirect_uri", "code", "nonce"])
 
     _args = {
         "audience": consumer.context.issuer,
@@ -366,8 +365,9 @@ def credential():
     trust_chains = get_verified_trust_chains(consumer, consumer.context.issuer)
     trust_chain = trust_chains[0]
     wallet_entity = current_app.server["wallet"]
-    wallet_entity.keyjar.import_jwks(issuer_id=consumer.context.issuer,
-                                     jwks=trust_chain.metadata["openid_credential_issuer"]["jwks"])
+    wallet_entity.keyjar = import_jwks(wallet_entity.keyjar,
+                                       trust_chain.metadata["openid_credential_issuer"]["jwks"],
+                                       consumer.context.issuer)
 
     consumer.context.keyjar = wallet_entity.keyjar
     _key_tag = session["ephemeral_key_tag"]
@@ -382,7 +382,8 @@ def credential():
         }
     }
     _service = consumer.get_service("credential")
-    req_info = _service.get_request_parameters(_request_args, access_token=_req_args["access_token"],
+    req_info = _service.get_request_parameters(_request_args,
+                                               access_token=_req_args["access_token"],
                                                state=_wia_flow["state"])
 
     resp = consumer.do_request(

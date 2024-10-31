@@ -6,6 +6,7 @@ from cryptojwt.utils import b64e
 from cryptojwt.utils import importer
 from fedservice.entity import FederationEntity
 from fedservice.entity.utils import get_federation_entity
+from fedservice.keyjar import import_jwks
 from idpyoidc.client.defaults import CC_METHOD
 
 BASEDIR = os.path.abspath(os.path.dirname(__file__))
@@ -264,9 +265,11 @@ def wallet_setup(federation):
         wallet = execute_function('tests.entities.wallet.main', **kwargs)
 
     # Need the wallet providers public keys. Could get this from the metadata
-    wallet["federation_entity"].keyjar.import_jwks(
-        federation["wallet_provider"]["wallet_provider"].context.keyjar.export_jwks(),
-        federation["wallet_provider"].entity_id)
+    _keyjar = wallet["federation_entity"].keyjar
+    _keyjar = import_jwks(_keyjar,
+                          federation["wallet_provider"][
+                              "wallet_provider"].context.keyjar.export_jwks(),
+                          federation["wallet_provider"].entity_id)
 
     return wallet
 

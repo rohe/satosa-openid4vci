@@ -3,6 +3,7 @@ import os
 import shutil
 from typing import Optional
 
+from fedservice.keyjar import import_jwks
 import pytest
 from cryptojwt.key_jar import init_key_jar
 from idpyoidc.client.defaults import DEFAULT_KEY_DEFS
@@ -209,7 +210,7 @@ class TestPersistence(object):
         _context = self.app.server.context
         _context.cdb[client_info["client_id"]] = client_info
         if jwks:
-            _context.keyjar.import_jwks(jwks, client_info["client_id"])
+            _context.keyjar = import_jwks(_context.keyjar, jwks, client_info["client_id"])
         if jwks_uri:
             pass
 

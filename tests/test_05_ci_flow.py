@@ -3,17 +3,23 @@ import hashlib
 import json
 import os
 
-import pytest
-import responses
-from cryptojwt import JWT, KeyJar
+from cryptojwt import JWT
+from cryptojwt import KeyJar
 from cryptojwt import as_unicode
 from cryptojwt.jwk.ec import new_ec_key
 from cryptojwt.jws.dsa import ECDSASigner
 from cryptojwt.utils import as_bytes
-from idpyoidc.util import load_yaml_config, rndstr
+from fedservice.keyjar import import_jwks
+from idpyoidc.util import load_yaml_config
+from idpyoidc.util import rndstr
+import pytest
+import responses
 from satosa_idpyop.idpyop import IdpyOPFrontend
 
-from tests import clear_folder, auth_req_callback_func, create_trust_chain_messages, hash_func
+from tests import auth_req_callback_func
+from tests import clear_folder
+from tests import create_trust_chain_messages
+from tests import hash_func
 from tests.build_federation import build_federation
 
 BASEDIR = os.path.abspath(os.path.dirname(__file__))
@@ -91,14 +97,15 @@ class TestInitAndReqistration(object):
         self.wallet = self.federation[WALLET_ID]
 
         oem_kj = self.wp["device_integrity_service"].oem_keyjar
-        oem_kj.import_jwks(oem_kj.export_jwks(private=True), WP_ID)
+        oem_kj = import_jwks(oem_kj, oem_kj.export_jwks(private=True), WP_ID)
 
     @pytest.fixture
     def frontend(self):
         clear_folder("op_storage")
         frontend_config = load_yaml_config("satosa_conf.yaml")
 
-        frontend_config["op"]["server_info"]["entity_type"]["openid_credential_issuer"]["kwargs"]["config"][
+        frontend_config["op"]["server_info"]["entity_type"]["openid_credential_issuer"]["kwargs"][
+            "config"][
             "userinfo"] = {
             "class": "satosa_idpyop.user_info.ProxyUserInfo",
             "kwargs": {
@@ -118,7 +125,8 @@ class TestInitAndReqistration(object):
 
         _keys = self.ta.keyjar.export_jwks()
         frontend_config["op"]["server_info"]["trust_anchors"][TA_ID]["keys"] = _keys["keys"]
-        frontend = IdpyOPFrontend(auth_req_callback_func, INTERNAL_ATTRIBUTES, frontend_config, CI_ID,
+        frontend = IdpyOPFrontend(auth_req_callback_func, INTERNAL_ATTRIBUTES, frontend_config,
+                                  CI_ID,
                                   "idpyop_frontend", ENDPOINT_WRAPPER_PATH)
         _ = frontend.register_endpoints([])
 
@@ -137,7 +145,7 @@ class TestInitAndReqistration(object):
         _wallet = self.wallet["wallet"]
 
         _wallet.oem_key_jar = KeyJar()
-        _wallet.oem_key_jar.import_jwks(_dis.oem_keyjar.export_jwks(), WP_ID)
+        _wallet.oem_key_jar = import_jwks(_wallet.oem_key_jar, _dis.oem_keyjar.export_jwks(), WP_ID)
 
         # Step 2 Device Integrity Check
 
@@ -223,7 +231,7 @@ class TestInitAndReqistration(object):
         _jwks = {"keys": [_ephemeral_key.serialize(private=True)]}
         _ephemeral_key_tag = _ephemeral_key.kid
         #
-        _wallet.context.keyjar.import_jwks(_jwks, _wallet.entity_id)
+        _wallet.context.keyjar = import_jwks(_wallet.context.keyjar, _jwks, _wallet.entity_id)
         _wallet.context.ephemeral_key = {_ephemeral_key_tag: _ephemeral_key}
 
         # Step 4-6 Get challenge
@@ -319,7 +327,8 @@ class TestInitAndReqistration(object):
                          adding_headers={"Content-Type": "application/json"}, status=200)
 
             # collect metadata for PID issuer
-            pid_issuer_metadata = self.wallet["federation_entity"].get_verified_metadata(frontend_entity_id)
+            pid_issuer_metadata = self.wallet["federation_entity"].get_verified_metadata(
+                frontend_entity_id)
 
         # and a wallet instance attestation must be collected
         wallet_instance_attestation, _ephemeral_key_tag = self.wallet_attestation_issuance()
@@ -359,7 +368,8 @@ class TestInitAndReqistration(object):
 
         # The PID Issuer parses the authz request
 
-        _authorization_endpoint = credential_issuer_entity["oauth_authorization_server"].get_endpoint(
+        _authorization_endpoint = credential_issuer_entity[
+            "oauth_authorization_server"].get_endpoint(
             'authorization')
         _authorization_endpoint.request_format = "url"
 
@@ -405,7 +415,8 @@ class TestInitAndReqistration(object):
 
         # Token endpoint
 
-        _token_endpoint = credential_issuer_entity["oauth_authorization_server"].get_endpoint("token")
+        _token_endpoint = credential_issuer_entity["oauth_authorization_server"].get_endpoint(
+            "token")
         _http_info = {
             "headers": token_req_info["headers"],
             "url": token_req_info["url"],
@@ -440,7 +451,8 @@ class TestInitAndReqistration(object):
 
         assert req_info["headers"]["Authorization"].startswith("DPoP")
 
-        _credential_endpoint = credential_issuer_entity["openid_credential_issuer"].get_endpoint("credential")
+        _credential_endpoint = credential_issuer_entity["openid_credential_issuer"].get_endpoint(
+            "credential")
 
         _http_info = {
             "headers": req_info["headers"],
