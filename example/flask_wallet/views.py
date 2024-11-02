@@ -260,7 +260,8 @@ def token():
     _key_tag = session["ephemeral_key_tag"]
     _wia_flow = wallet_entity.context.wia_flow[_key_tag]
 
-    _req_args = consumer.context.cstate.get_set(_wia_flow["state"], claim=["redirect_uri", "code", "nonce"])
+    _req_args = consumer.context.cstate.get_set(_wia_flow["state"],
+                                                claim=["redirect_uri", "code", "nonce"])
 
     _args = {
         "audience": consumer.context.issuer,

@@ -238,10 +238,10 @@ def wallet_setup(federation):
         wallet = execute_function('tests.entities.wallet.main', **kwargs)
 
     # Need the wallet providers public keys. Could get this from the metadata
-    wallet["federation_entity"].keyjar = import_jwks(
-        wallet["federation_entity"].keyjar,
-        federation["wallet_provider"]["wallet_provider"].context.keyjar.export_jwks(),
-        federation["wallet_provider"].entity_id)
+    _kj = wallet["federation_entity"].keyjar
+    _kj = import_jwks(_kj,
+                      federation["wallet_provider"]["wallet_provider"].context.keyjar.export_jwks(),
+                      federation["wallet_provider"].entity_id)
 
     return wallet
 

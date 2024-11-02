@@ -87,7 +87,8 @@ def attest_key():
 
     request_args = {
         "challenge": challenge,
-        "crypto_hardware_key_tag": wallet_entity.context.init_reg[challenge]["crypto_hardware_key_tag"]
+        "crypto_hardware_key_tag": wallet_entity.context.init_reg[challenge][
+            "crypto_hardware_key_tag"]
     }
 
     return render_template('key_attestation.html', key_attestation_response=resp,
@@ -316,7 +317,8 @@ def token():
     _key_tag = session["ephemeral_key_tag"]
     _wia_flow = wallet_entity.context.wia_flow[_key_tag]
 
-    _req_args = consumer.context.cstate.get_set(_wia_flow["state"], claim=["redirect_uri", "code", "nonce"])
+    _req_args = consumer.context.cstate.get_set(_wia_flow["state"],
+                                                claim=["redirect_uri", "code", "nonce"])
 
     _args = {
         "audience": consumer.context.issuer,
@@ -380,7 +382,8 @@ def credential():
     }
 
     _service = consumer.get_service("credential")
-    req_info = _service.get_request_parameters(_request_args, access_token=_req_args["access_token"],
+    req_info = _service.get_request_parameters(_request_args,
+                                               access_token=_req_args["access_token"],
                                                state=_wia_flow["state"])
 
     resp = consumer.do_request(

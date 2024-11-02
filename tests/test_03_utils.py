@@ -3,6 +3,7 @@ import os
 import shutil
 from typing import Optional
 
+from fedservice.keyjar import import_jwks
 import pytest
 from cryptojwt.key_jar import init_key_jar
 from idpyoidc.client.defaults import DEFAULT_KEY_DEFS
