@@ -13,9 +13,9 @@ from flask import session
 from flask.helpers import send_from_directory
 from idpyoidc import verified_claim_name
 from idpyoidc.client.defaults import CC_METHOD
+from idpyoidc.key_import import import_jwks, store_under_other_id
 from idpyoidc.util import rndstr
 from openid4v.message import WalletInstanceAttestationJWT
-from openid4v.message import CredentialResponse
 
 logger = logging.getLogger(__name__)
 
@@ -306,8 +306,9 @@ def credential():
     trust_chains = get_verified_trust_chains(consumer, consumer.context.issuer)
     trust_chain = trust_chains[0]
     wallet_entity = current_app.server["wallet"]
-    wallet_entity.keyjar.import_jwks(issuer_id=consumer.context.issuer,
-                                     jwks=trust_chain.metadata["openid_credential_issuer"]["jwks"])
+    wallet_entity.keyjar = import_jwks(wallet_entity.keyjar,
+                                       trust_chain.metadata["openid_credential_issuer"]["jwks"],
+                                       consumer.context.issuer)
 
     # consumer.context.keyjar = wallet_entity.keyjar
     consumer.keyjar = wallet_entity.keyjar
@@ -325,7 +326,7 @@ def credential():
                                                state=_wia_flow["state"])
 
     # Issuer Fix
-    consumer.keyjar.import_jwks(consumer.keyjar.export_jwks(issuer_id="https://127.0.0.1:8080"), "https://vc-interop-1.sunet.se")
+    consumer.keyjar = store_under_other_id(consumer.keyjar, "https://127.0.0.1:8080", "https://vc-interop-1.sunet.se")
 
     resp = consumer.do_request(
         "credential",

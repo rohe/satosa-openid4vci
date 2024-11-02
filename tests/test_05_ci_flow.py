@@ -10,6 +10,7 @@ from cryptojwt import as_unicode
 from cryptojwt.jwk.ec import new_ec_key
 from cryptojwt.jws.dsa import ECDSASigner
 from cryptojwt.utils import as_bytes
+from idpyoidc.key_import import store_under_other_id, import_jwks
 from idpyoidc.util import load_yaml_config, rndstr
 from satosa_idpyop.idpyop import IdpyOPFrontend
 
@@ -91,7 +92,7 @@ class TestInitAndReqistration(object):
         self.wallet = self.federation[WALLET_ID]
 
         oem_kj = self.wp["device_integrity_service"].oem_keyjar
-        oem_kj.import_jwks(oem_kj.export_jwks(private=True), WP_ID)
+        oem_kj = store_under_other_id(oem_kj, "", WP_ID, True)
 
     @pytest.fixture
     def frontend(self):
@@ -137,7 +138,7 @@ class TestInitAndReqistration(object):
         _wallet = self.wallet["wallet"]
 
         _wallet.oem_key_jar = KeyJar()
-        _wallet.oem_key_jar.import_jwks(_dis.oem_keyjar.export_jwks(), WP_ID)
+        _wallet.oem_key_jar = store_under_other_id(_dis.oem_keyjar, "", WP_ID)
 
         # Step 2 Device Integrity Check
 
@@ -223,7 +224,7 @@ class TestInitAndReqistration(object):
         _jwks = {"keys": [_ephemeral_key.serialize(private=True)]}
         _ephemeral_key_tag = _ephemeral_key.kid
         #
-        _wallet.context.keyjar.import_jwks(_jwks, _wallet.entity_id)
+        _wallet.context.keyjar = import_jwks(_wallet.context.keyjar, _jwks, _wallet.entity_id)
         _wallet.context.ephemeral_key = {_ephemeral_key_tag: _ephemeral_key}
 
         # Step 4-6 Get challenge

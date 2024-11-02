@@ -2,8 +2,7 @@ import logging
 
 import werkzeug
 from cryptojwt import JWT
-from cryptojwt.jwk.ec import new_ec_key
-from cryptojwt.utils import b64e, as_unicode
+from cryptojwt.utils import b64e
 from fedservice.entity import get_verified_trust_chains
 from flask import Blueprint
 from flask import current_app
@@ -13,6 +12,7 @@ from flask import request
 from flask import session
 from flask.helpers import send_from_directory
 from idpyoidc.client.defaults import CC_METHOD
+from idpyoidc.key_import import import_jwks
 from idpyoidc.util import rndstr
 from idpysdjwt.verifier import display_sdjwt
 from openid4v.message import WalletInstanceAttestationJWT
@@ -53,7 +53,6 @@ def send_image(path):
     return send_from_directory('img', path)
 
 
-
 @entity.route('/wallet_provider')
 def wallet_provider():
     wp_id = request.args["entity_id"]
@@ -65,7 +64,6 @@ def wallet_provider():
     return render_template('wallet_provider.html',
                            trust_chain_path=trust_chain[0].iss_path,
                            metadata=trust_chain[0].metadata)
-
 
 
 @entity.route('/wallet_attestation_issuance')
@@ -299,10 +297,11 @@ def credential():
     trust_chains = get_verified_trust_chains(consumer, consumer.context.issuer)
     trust_chain = trust_chains[0]
     wallet_entity = current_app.server["wallet"]
-    wallet_entity.keyjar.import_jwks(issuer_id=consumer.context.issuer,
-                                     jwks=trust_chain.metadata["openid_credential_issuer"]["jwks"])
+    wallet_entity.keyjar = import_jwks(wallet_entity.keyjar,
+                                       trust_chain.metadata["openid_credential_issuer"]["jwks"],
+                                       consumer.context.issuer)
 
-    #consumer.context.keyjar = wallet_entity.keyjar
+    # consumer.context.keyjar = wallet_entity.keyjar
     consumer.keyjar = wallet_entity.keyjar
     _key_tag = session["ephemeral_key_tag"]
     _wia_flow = wallet_entity.context.wia_flow[_key_tag]

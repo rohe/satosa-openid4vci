@@ -4,6 +4,7 @@ import shutil
 from cryptojwt.utils import importer
 from fedservice.entity import FederationEntity
 from fedservice.entity.utils import get_federation_entity
+from idpyoidc.key_import import import_jwks
 
 CRYPT_CONFIG = {
     "kwargs": {
@@ -237,7 +238,8 @@ def wallet_setup(federation):
         wallet = execute_function('tests.entities.wallet.main', **kwargs)
 
     # Need the wallet providers public keys. Could get this from the metadata
-    wallet["federation_entity"].keyjar.import_jwks(
+    wallet["federation_entity"].keyjar = import_jwks(
+        wallet["federation_entity"].keyjar,
         federation["wallet_provider"]["wallet_provider"].context.keyjar.export_jwks(),
         federation["wallet_provider"].entity_id)
 

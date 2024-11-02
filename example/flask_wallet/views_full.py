@@ -13,6 +13,7 @@ from flask import request
 from flask import session
 from flask.helpers import send_from_directory
 from idpyoidc.client.defaults import CC_METHOD
+from idpyoidc.key_import import import_jwks
 from idpyoidc.util import rndstr
 from idpysdjwt.verifier import display_sdjwt
 from openid4v.message import WalletInstanceAttestationJWT
@@ -382,8 +383,9 @@ def credential():
     trust_chains = get_verified_trust_chains(consumer, consumer.context.issuer)
     trust_chain = trust_chains[0]
     wallet_entity = current_app.server["wallet"]
-    wallet_entity.keyjar.import_jwks(issuer_id=consumer.context.issuer,
-                                     jwks=trust_chain.metadata["openid_credential_issuer"]["jwks"])
+    wallet_entity.keyjar = import_jwks(wallet_entity.keyjar,
+                                       trust_chain.metadata["openid_credential_issuer"]["jwks"],
+                                       consumer.context.issuer)
 
     #consumer.context.keyjar = wallet_entity.keyjar
     consumer.keyjar = wallet_entity.keyjar

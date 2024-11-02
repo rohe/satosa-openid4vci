@@ -6,6 +6,7 @@ from typing import Optional
 import pytest
 from cryptojwt.key_jar import init_key_jar
 from idpyoidc.client.defaults import DEFAULT_KEY_DEFS
+from idpyoidc.key_import import import_jwks
 from idpyoidc.message.oidc import AuthorizationRequest
 from idpyoidc.server import Server
 from idpyoidc.server.authn_event import create_authn_event
@@ -209,7 +210,7 @@ class TestPersistence(object):
         _context = self.app.server.context
         _context.cdb[client_info["client_id"]] = client_info
         if jwks:
-            _context.keyjar.import_jwks(jwks, client_info["client_id"])
+            _context.keyjar = import_jwks(_context.keyjar, jwks, client_info["client_id"])
         if jwks_uri:
             pass
 

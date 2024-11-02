@@ -6,7 +6,6 @@ import responses
 from cryptojwt.jws.jws import factory
 from idpyoidc.util import load_yaml_config
 from idpyoidc.util import rndstr
-from openid4v.client.client_authn import ClientAuthenticationAttestation
 from satosa.state import State
 from satosa_idpyop.core import ExtendedContext
 from satosa_openid4vci.openid4vci import OpenID4VCIFrontend

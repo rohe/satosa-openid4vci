@@ -1,13 +1,8 @@
-import base64
-import hashlib
-import json
 import logging
 
 import werkzeug
 from cryptojwt import JWT
-from cryptojwt.jwk.ec import new_ec_key
-from cryptojwt.jws.dsa import ECDSASigner
-from cryptojwt.utils import b64e, as_unicode, as_bytes
+from cryptojwt.utils import b64e, as_unicode
 from fedservice.entity import get_verified_trust_chains
 from flask import Blueprint
 from flask import current_app
@@ -17,6 +12,7 @@ from flask import request
 from flask import session
 from flask.helpers import send_from_directory
 from idpyoidc.client.defaults import CC_METHOD
+from idpyoidc.key_import import import_jwks
 from idpyoidc.util import rndstr
 from idpysdjwt.verifier import display_sdjwt
 from openid4v.message import WalletInstanceAttestationJWT
@@ -366,8 +362,9 @@ def credential():
     trust_chains = get_verified_trust_chains(consumer, consumer.context.issuer)
     trust_chain = trust_chains[0]
     wallet_entity = current_app.server["wallet"]
-    wallet_entity.keyjar.import_jwks(issuer_id=consumer.context.issuer,
-                                     jwks=trust_chain.metadata["openid_credential_issuer"]["jwks"])
+    wallet_entity.keyjar = import_jwks(wallet_entity.keyjar,
+                                       trust_chain.metadata["openid_credential_issuer"]["jwks"],
+                                       consumer.context.issuer)
 
     consumer.context.keyjar = wallet_entity.keyjar
     _key_tag = session["ephemeral_key_tag"]
@@ -381,6 +378,7 @@ def credential():
             "type": ["PersonIdentificationData"]
         }
     }
+
     _service = consumer.get_service("credential")
     req_info = _service.get_request_parameters(_request_args, access_token=_req_args["access_token"],
                                                state=_wia_flow["state"])

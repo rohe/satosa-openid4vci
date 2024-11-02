@@ -62,6 +62,9 @@ class OpenID4VCIFrontend(FrontendModule, Openid4VCIEndpoints):
         oauth_persistence = getattr(self.app.oauth_authorization_server, "persistence", None)
         if oauth_persistence:
             oauth_persistence.store_state()
+        oic_persistence = getattr(self.app.openid_credential_issuer, "persistence", None)
+        if oic_persistence:
+            oic_persistence.store_state()
 
     def oci_jwks_endpoint(self, context: Context):
         """

@@ -1,6 +1,7 @@
 import logging
 
 from idpyoidc.message import Message
+from idpyoidc.node import topmost_unit
 from satosa_idpyop.core.response import JsonResponse
 from satosa_idpyop.endpoint_wrapper import EndPointWrapper
 from satosa_idpyop.utils import get_http_info
@@ -19,7 +20,12 @@ class CredentialEndpointWrapper(EndPointWrapper):
         logger.debug(f"request: {context.request}")
         logger.debug(f"https_info: {_http_info}")
         parse_req = self.parse_request(context.request, http_info=_http_info)
-        _claims = _entity.persistence.load_claims(parse_req["client_id"])
+
+        # Have to read from the oauth servers persistence layer
+        root = topmost_unit(self)
+        _guise = root['oauth_authorization_server']
+        _claims = _guise.persistence.load_claims(parse_req["client_id"])
+
         logger.debug(f"parse_req: {parse_req}")
         proc_req = self.process_request(context.request, parse_req, _http_info,
                                         extra_claims=_claims)
