@@ -7,7 +7,7 @@ config:
   base_url: &base_url <base_url>
 
   storage:
-    class: satosa_oidcop.core.storage.file.FilesystemDB
+    class: satosa_oidcop.core.storage.file.FilesystemDBNoCache
     kwargs:
       fdir: storage
       key_conv: idpyoidc.util.Base64
@@ -378,9 +378,7 @@ config:
                             url: http://vc-interop-1.sunet.se/api/v1/credential
                             jwks_url: http://vc-interop-1.sunet.se/api/v1/credential/.well-known/jwks
                             body:
-                              authentic_source: SUNET
                               credential_type: sdjwt
                               document_type: PDA1
-                              document_id: document_id_7
               template_dir: template
               session_management: false
