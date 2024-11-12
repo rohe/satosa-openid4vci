@@ -302,9 +302,9 @@ config:
                     - email
                     - nickname
                 credential_configurations_supported:
-                  PersonIdentificationData:
+                  PDA1Credential:
                     format: vc+sd-jwt
-                    id: eudiw.pid.se
+                    id: eudiw.pda1.se
                     cryptographic_binding_methods_supported:
                       - jwk
                     cryptographic_suites_supported:
@@ -313,20 +313,14 @@ config:
                       - ES256
                       - ES512
                     display:
-                      name: Swedish PID Provider Example
+                      name: Swedish PDA1 Provider Example
                       locale: en-US
                     vct:
-                        PersonIdentificationData
+                        PDA1Credential
                     credential_definition:
                       type:
-                        - PersonIdentificationData
+                        - PDA1Credential
                       credentialSubject:
-                        name:
-                          display:
-                            -
-                              name: Name of a person
-                              locale: en-US
-                          mandatory: true
                         family_name:
                           display:
                             -
@@ -339,18 +333,43 @@ config:
                               locale: en-US
                               name: Current First Name
                           mandatory: true
-                        email:
+                        birth_date:
                           display:
-                            -
-                              locale: en-US
-                              name: Current email address
-                          mandatory: true
-                        nickname:
-                          mandatory: true
+                            - locale: en-US
+                              name: Birth date
+                  EHICCredential:
+                    format: vc+sd-jwt
+                    id: eudiw.ehic.se
+                    cryptographic_binding_methods_supported:
+                      - jwk
+                    cryptographic_suites_supported:
+                      - RS256
+                      - RS512
+                      - ES256
+                      - ES512
+                    display:
+                      name: Swedish EHIC Provider Example
+                      locale: en-US
+                    vct:
+                      EHICCredential
+                    credential_definition:
+                      type:
+                        - EHICCredential
+                      credentialSubject:
+                        family_name:
                           display:
-                            -
-                              name: A persons nickname
-                              locale: en-US
+                            - locale: en-US
+                              name: Current Family Name
+                          mandatory: true
+                        given_name:
+                          display:
+                            - locale: en-US
+                              name: Current First Name
+                          mandatory: true
+                        birth_date:
+                          display:
+                            - locale: en-US
+                              name: Birth date
               keys:
                 key_defs:
                   -
@@ -372,7 +391,15 @@ config:
                     client_authn_method:
                       - dpop_client_auth
                     credential_constructor:
-                      PersonIdentificationData:
+                      EHICCredential:
+                        class: openid4v.openid_credential_issuer.credential_constructor.authentic_source.CredentialConstructor
+                        kwargs:
+                            url: http://vc-interop-1.sunet.se/api/v1/credential
+                            jwks_url: http://vc-interop-1.sunet.se/api/v1/credential/.well-known/jwks
+                            body:
+                              credential_type: sdjwt
+                              document_type: EHIC
+                      PDA1Credential:
                         class: openid4v.openid_credential_issuer.credential_constructor.authentic_source.CredentialConstructor
                         kwargs:
                             url: http://vc-interop-1.sunet.se/api/v1/credential
