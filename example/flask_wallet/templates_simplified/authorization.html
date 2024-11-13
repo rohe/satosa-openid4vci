@@ -8,9 +8,15 @@
 <h2>4:1 Authorization request</h2>
 Again this contains more than one step.
 <dl>
-    <dt style="color: blue">Authz request</dt>
-    <dd>{{auth_req_uri}}<p></p></dd>
-    </dt>
+    <dt style="color: blue">PAR Authz request</dt>
+    <dd>
+        <dl>
+            {% for key, value in par_request.items() %}
+            <dt>{{ key }}</dt>
+            <dd>{{ value }}</dd>
+            {% endfor %}
+        </dl>
+    </dd>
     <dt style="color: green">Authorization Response</dt>
     <dd>
         <dl>

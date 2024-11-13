@@ -30,17 +30,6 @@ The Wallet traverses the Federation to find the right PID Issuer
     </dd>
 </dl>
 <p></p>
-<dl>
-    <dt>Verified Trust Marks per Issuer</dt>
-    <dd>
-        <dl>
-            {% for key, value in trust_marks.items() %}
-            <dt>{{ key }}</dt>
-            <dd>{{ value }}</dd>
-            {% endfor %}
-        </dl>
-    </dd>
-</dl>
 
 Based on the process above this was the chosen PID Isssuer:
 {{ pid_issuer_to_use }}

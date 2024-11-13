@@ -105,8 +105,7 @@ def wir():
                            response_headers=_ass.jws_header)
 
 
-@entity.route('/picking_pid_issuer')
-def picking_pid_issuer():
+def find_credential_issuers():
     res = []
     ta_id = list(current_app.federation_entity.trust_anchors.keys())[0]
     list_resp = current_app.federation_entity.do_request('list', entity_id=ta_id)
@@ -122,56 +121,106 @@ def picking_pid_issuer():
         res.extend(
             current_app.federation_entity.trawl(ta_id, entity_id,
                                                 entity_type="openid_credential_issuer"))
+    return res
 
-    credential_issuers = res
-    logger.debug(f"Credential Issuers: {credential_issuers}")
 
+def find_credential_type_issuers(credential_issuers, credential_type):
     _oci = {}
     # Other possibility = 'PDA1Credential'
-    credential_type = "EHICCredential"
-    for pid in set(res):
+    # credential_type = "EHICCredential"
+    for pid in set(credential_issuers):
         oci_metadata = current_app.federation_entity.get_verified_metadata(pid)
         # logger.info(json.dumps(oci_metadata, sort_keys=True, indent=4))
         for id, cs in oci_metadata['openid_credential_issuer']["credential_configurations_supported"].items():
             if credential_type in cs["credential_definition"]["type"]:
                 _oci[pid] = oci_metadata
                 break
+    return _oci
 
-    pid_issuers = list(_oci.keys())
-    logger.debug(f"PID Issuers: {pid_issuers}")
 
-    pid_issuer_to_use = []
-    tmi = {}
-    se_pid_issuer_tm = 'http://dc4eu.example.com/EHICCredential/se'
-    for eid, metadata in _oci.items():
+def find_issuers_of_trustmark(credential_issuers, credential_type):
+    cred_issuer_to_use = []
+    # tmi = {}
+    trustmark_id = f'http://dc4eu.example.com/{credential_type}/se'
+
+    for eid, metadata in credential_issuers.items():
         _trust_chain = current_app.federation_entity.get_trust_chains(eid)[0]
         _entity_conf = _trust_chain.verified_chain[-1]
         if "trust_marks" in _entity_conf:
-            tmi[eid] = []
+            # tmi[eid] = []
             for _mark in _entity_conf["trust_marks"]:
                 _verified_trust_mark = current_app.federation_entity.verify_trust_mark(
                     _mark, check_with_issuer=True)
                 if _verified_trust_mark:
-                    tmi[eid].append(_verified_trust_mark)
-                    if _verified_trust_mark.get("id") == se_pid_issuer_tm:
-                        pid_issuer_to_use.append(eid)
+                    # tmi[eid].append(_verified_trust_mark)
+                    if _verified_trust_mark.get("id") == trustmark_id:
+                        cred_issuer_to_use.append(eid)
                 else:
                     logger.warning("Could not verify trust mark")
 
-    logger.debug(f"PID Issuer to use: {pid_issuer_to_use}")
+    return cred_issuer_to_use
 
-    session["pid_issuer_to_use"] = pid_issuer_to_use[0]
+
+@entity.route('/picking_ehic_issuer')
+def picking_ehic_issuer():
+    credential_type = "EHICCredential"
+
+    # All credential issuers
+    credential_issuers = find_credential_issuers()
+    logger.debug(f"Credential Issuers: {credential_issuers}")
+
+    # Credential issuers that issue a specific credential type
+    _oci = find_credential_type_issuers(credential_issuers, credential_type)
+    cred_issuers = set(list(_oci.keys()))
+    logger.debug(f"{credential_type} Issuers: {cred_issuers}")
+
+    # Credential issuer that has a specific trust mark
+    cred_issuer_to_use = find_issuers_of_trustmark(_oci, credential_type)
+    logger.debug(f"Credential Issuer to use: {cred_issuer_to_use}")
+
+    session["cred_issuer_to_use"] = cred_issuer_to_use[0]
+    session["credential_type"] = credential_type
 
     return render_template('picking_pid_issuer.html',
                            credential_issuers=credential_issuers,
-                           pid_issuers=pid_issuers,
-                           trust_marks=tmi,
-                           pid_issuer_to_use=pid_issuer_to_use)
+                           credential_type__issuers=cred_issuer_to_use,
+                           cred_issuer_to_use=cred_issuer_to_use)
+
+@entity.route('/picking_pda1_issuer')
+def picking_pda1_issuer():
+    credential_type = "PDA1Credential"
+
+    # All credential issuers
+    credential_issuers = find_credential_issuers()
+    logger.debug(f"Credential Issuers: {credential_issuers}")
+
+    # Credential issuers that issue a specific credential type
+    _oci = find_credential_type_issuers(credential_issuers, credential_type)
+    cred_issuers = set(list(_oci.keys()))
+    logger.debug(f"{credential_type} Issuers: {cred_issuers}")
+
+    # Credential issuer that has a specific trust mark
+    cred_issuer_to_use = find_issuers_of_trustmark(_oci, credential_type)
+    logger.debug(f"Credential Issuer to use: {cred_issuer_to_use}")
+
+    session["cred_issuer_to_use"] = cred_issuer_to_use[0]
+    session["credential_type"] = credential_type
+
+    return render_template('picking_pid_issuer.html',
+                           credential_issuers=credential_issuers,
+                           credential_type__issuers=cred_issuer_to_use,
+                           cred_issuer_to_use=cred_issuer_to_use)
+
+
+CRED_CHOICE = {
+    "EHICCredential": "authentic_source=authentic_source_se&document_type=EHIC&collect_id=collect_id_10",
+    "PDA1Credential": "authentic_source=authentic_source_dk&document_type=PDA1&collect_id=collect_id_20"
+}
 
 
 @entity.route('/authz')
 def authz():
-    pid_issuer = session["pid_issuer_to_use"]
+    pid_issuer = session["cred_issuer_to_use"]
     parent = current_app.server["pid_eaa_consumer"]
     _actor = parent.get_consumer(pid_issuer)
     if _actor is None:
@@ -192,12 +241,14 @@ def authz():
         "authorization_details": [{
             "type": "openid_credential",
             "format": "vc+sd-jwt",
-            "vct": "EHICCredential"
+            "vct": session["credential_type"]
         }],
         "response_type": "code",
         "client_id": _key_tag,
         "redirect_uri": _redirect_uri,
+        "issuer_state": CRED_CHOICE[session["credential_type"]]
     }
+    session["authz_req_args"] = request_args
 
     kwargs = {
         "state": rndstr(24),
@@ -248,7 +299,7 @@ def authz_cb(issuer):
     _consumer.finalize_auth(request.args)
     session["issuer"] = issuer
     return render_template('authorization.html',
-                           # par_request=session["par_req"],
+                           par_request=session["authz_req_args"],
                            # auth_req_uri=session["auth_req_uri"],
                            response=request.args.to_dict())
 
