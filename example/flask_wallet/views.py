@@ -127,7 +127,8 @@ def picking_pid_issuer():
     logger.debug(f"Credential Issuers: {credential_issuers}")
 
     _oci = {}
-    credential_type = "PersonIdentificationData"
+    # Other possibility = 'PDA1Credential'
+    credential_type = "EHICCredential"
     for pid in set(res):
         oci_metadata = current_app.federation_entity.get_verified_metadata(pid)
         # logger.info(json.dumps(oci_metadata, sort_keys=True, indent=4))
@@ -141,7 +142,7 @@ def picking_pid_issuer():
 
     pid_issuer_to_use = []
     tmi = {}
-    se_pid_issuer_tm = 'http://dc4eu.example.com/PersonIdentificationData/se'
+    se_pid_issuer_tm = 'http://dc4eu.example.com/EHICCredential/se'
     for eid, metadata in _oci.items():
         _trust_chain = current_app.federation_entity.get_trust_chains(eid)[0]
         _entity_conf = _trust_chain.verified_chain[-1]
@@ -191,7 +192,7 @@ def authz():
         "authorization_details": [{
             "type": "openid_credential",
             "format": "vc+sd-jwt",
-            "vct": "PersonIdentificationData"
+            "vct": "EHICCredential"
         }],
         "response_type": "code",
         "client_id": _key_tag,
