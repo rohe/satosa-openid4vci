@@ -1,6 +1,5 @@
 import logging
 
-import werkzeug
 from cryptojwt import JWT
 from cryptojwt.utils import b64e
 from fedservice.entity import get_verified_trust_chains
@@ -13,9 +12,11 @@ from flask import session
 from flask.helpers import send_from_directory
 from idpyoidc import verified_claim_name
 from idpyoidc.client.defaults import CC_METHOD
-from idpyoidc.key_import import import_jwks, store_under_other_id
+from idpyoidc.key_import import import_jwks
+from idpyoidc.key_import import store_under_other_id
 from idpyoidc.util import rndstr
 from openid4v.message import WalletInstanceAttestationJWT
+import werkzeug
 
 logger = logging.getLogger(__name__)
 
@@ -107,10 +108,11 @@ def wir():
 
 def find_credential_issuers():
     res = []
+    entity_type = "openid_credential_issuer"
     ta_id = list(current_app.federation_entity.trust_anchors.keys())[0]
     list_resp = current_app.federation_entity.do_request('list', entity_id=ta_id)
 
-    logger.debug(f"Subordinates to TA: {list_resp}")
+    logger.debug(f"Subordinates to TA ({ta_id}): {list_resp}")
     for entity_id in list_resp:
         # first find out if the entity is an openid credential issuer
         _metadata = current_app.federation_entity.get_verified_metadata(entity_id)
@@ -118,9 +120,13 @@ def find_credential_issuers():
             continue
         if "openid_credential_issuer" in _metadata:
             res.append(entity_id)
-        res.extend(
-            current_app.federation_entity.trawl(ta_id, entity_id,
-                                                entity_type="openid_credential_issuer"))
+        logger.debug(
+            f"Trawling beneath '{entity_id}' looking for '{entity_type}'")
+        _subs = current_app.federation_entity.trawl(ta_id, entity_id, entity_type=entity_type)
+        if _subs:
+            for sub in _subs:
+                if sub not in res:
+                    res.append(sub)
     return res
 
 
@@ -131,7 +137,8 @@ def find_credential_type_issuers(credential_issuers, credential_type):
     for pid in set(credential_issuers):
         oci_metadata = current_app.federation_entity.get_verified_metadata(pid)
         # logger.info(json.dumps(oci_metadata, sort_keys=True, indent=4))
-        for id, cs in oci_metadata['openid_credential_issuer']["credential_configurations_supported"].items():
+        for id, cs in oci_metadata['openid_credential_issuer'][
+            "credential_configurations_supported"].items():
             if credential_type in cs["credential_definition"]["type"]:
                 _oci[pid] = oci_metadata
                 break
@@ -186,6 +193,7 @@ def picking_ehic_issuer():
                            credential_type__issuers=cred_issuer_to_use,
                            cred_issuer_to_use=cred_issuer_to_use)
 
+
 @entity.route('/picking_pda1_issuer')
 def picking_pda1_issuer():
     credential_type = "PDA1Credential"
@@ -213,8 +221,10 @@ def picking_pda1_issuer():
 
 
 CRED_CHOICE = {
-    "EHICCredential": "authentic_source=authentic_source_se&document_type=EHIC&collect_id=collect_id_10",
-    "PDA1Credential": "authentic_source=authentic_source_dk&document_type=PDA1&collect_id=collect_id_20"
+    "EHICCredential": "authentic_source=authentic_source_se&document_type=EHIC&collect_id"
+                      "=collect_id_10",
+    "PDA1Credential": "authentic_source=authentic_source_dk&document_type=PDA1&collect_id"
+                      "=collect_id_20"
 }
 
 
@@ -375,11 +385,13 @@ def credential():
     }
 
     _service = consumer.get_service("credential")
-    req_info = _service.get_request_parameters(_request_args, access_token=_req_args["access_token"],
+    req_info = _service.get_request_parameters(_request_args,
+                                               access_token=_req_args["access_token"],
                                                state=_wia_flow["state"])
 
     # Issuer Fix
-    consumer.keyjar = store_under_other_id(consumer.keyjar, "https://127.0.0.1:8080", "https://vc-interop-1.sunet.se")
+    consumer.keyjar = store_under_other_id(consumer.keyjar, "https://127.0.0.1:8080",
+                                           "https://vc-interop-1.sunet.se")
 
     resp = consumer.do_request(
         "credential",
