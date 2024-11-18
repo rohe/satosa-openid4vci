@@ -145,7 +145,7 @@ class OpenID4VCIFrontend(FrontendModule, Openid4VCIEndpoints):
         endpoint = _entity_type.get_endpoint("authorization")
         # have to look up the original authorization request in the PAR db
         _ec = endpoint.upstream_get("context")
-        _entity_type.persistence.restore_pushed_authorization()
+        _entity_type.persistence.restore_pushed_authorization(orig_req["request_uri"])
         logger.debug(f"PAR_db: {list(_ec.par_db.keys())}")
         parse_req = None
         if _ec.par_db:

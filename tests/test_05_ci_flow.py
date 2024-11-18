@@ -3,6 +3,8 @@ import hashlib
 import json
 import os
 
+import pytest
+import responses
 from cryptojwt import JWT
 from cryptojwt import KeyJar
 from cryptojwt import as_unicode
@@ -20,6 +22,11 @@ from tests import hash_func
 from tests.build_federation import build_federation
 
 BASEDIR = os.path.abspath(os.path.dirname(__file__))
+
+
+def full_path(local_file):
+    return os.path.join(BASEDIR, local_file)
+
 
 INTERNAL_ATTRIBUTES = {
     "attributes": {"mail": {"saml": ["email"], "openid": ["email"]}}
@@ -101,30 +108,16 @@ class TestInitAndReqistration(object):
         clear_folder("op_storage")
         frontend_config = load_yaml_config("satosa_conf.yaml")
 
-        frontend_config["op"]["server_info"]["entity_type"]["openid_credential_issuer"]["kwargs"][
-            "config"][
-            "userinfo"] = {
-            "class": "satosa_idpyop.user_info.ProxyUserInfo",
-            "kwargs": {
-                "credential_type_to_claims": {
-                    "PersonIdentificationData": [
-                        "email"
-                        "address.streetaddress"
-                        "sub"
-                        "name"
-                        "family_name"
-                        "given_name"
-                        "nickname"
-                    ]
-                }
-            }
-        }
+        _file_name = frontend_config["op"]["server_info"]["entity_type"]["oauth_authorization_server"]["kwargs"][
+            "config"]["userinfo"]["kwargs"]["db_file"]
+
+        frontend_config["op"]["server_info"]["entity_type"]["oauth_authorization_server"]["kwargs"][
+            "config"]["userinfo"]["kwargs"]["db_file"] = full_path(_file_name)
 
         _keys = self.ta.keyjar.export_jwks()
         frontend_config["op"]["server_info"]["trust_anchors"][TA_ID]["keys"] = _keys["keys"]
         frontend = IdpyOPFrontend(auth_req_callback_func, INTERNAL_ATTRIBUTES, frontend_config,
-                                  CI_ID,
-                                  "idpyop_frontend", ENDPOINT_WRAPPER_PATH)
+                                  CI_ID, "idpyop_frontend", ENDPOINT_WRAPPER_PATH)
         _ = frontend.register_endpoints([])
 
         credential_issuer_entity = frontend.app.server
@@ -184,7 +177,7 @@ class TestInitAndReqistration(object):
         _key_attestation_service = _wallet.get_service("key_attestation")
         request_attr = {
             "challenge": challenge,
-            "crypto_hardware_key_tag": as_unicode(crypto_hardware_key_tag)
+            "crypto_hardware_key": json.dumps(_wallet.context.crypto_hardware_key.serialize())
         }
         req = _key_attestation_service.construct(request_args=request_attr)
 
@@ -346,7 +339,7 @@ class TestInitAndReqistration(object):
                 {
                     "type": "openid_credential",
                     "format": "vc+sd-jwt",
-                    "vct": "https://edugain.com"
+                    "vct": "Geant_CID_example"
                 }
             ],
             "response_type": "code",
@@ -360,8 +353,8 @@ class TestInitAndReqistration(object):
             "signing_key": self.wallet["wallet"].context.ephemeral_key[_ephemeral_key_tag]
         }
 
-        authz_req = authorization_service.get_request_parameters(request_args=request_args,
-                                                                 **kwargs)
+        authz_req_info = authorization_service.get_request_parameters(request_args=request_args,
+                                                                      **kwargs)
 
         # The PID Issuer parses the authz request
 
@@ -376,7 +369,8 @@ class TestInitAndReqistration(object):
                 rsps.add("GET", _url, body=_jwks,
                          adding_headers={"Content-Type": "application/json"}, status=200)
 
-            parsed_args = _authorization_endpoint.parse_request(authz_req["url"])
+            parsed_args = _authorization_endpoint.parse_request(authz_req_info["url"],
+                                                                http_info={"headers": authz_req_info["headers"]})
 
         authz_response = _authorization_endpoint.process_request(parsed_args)
 

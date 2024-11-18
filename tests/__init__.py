@@ -6,8 +6,8 @@ from cryptojwt.utils import b64e
 from cryptojwt.utils import importer
 from fedservice.entity import FederationEntity
 from fedservice.entity.utils import get_federation_entity
-from fedservice.keyjar import import_jwks
 from idpyoidc.client.defaults import CC_METHOD
+from idpyoidc.key_import import import_jwks
 
 BASEDIR = os.path.abspath(os.path.dirname(__file__))
 

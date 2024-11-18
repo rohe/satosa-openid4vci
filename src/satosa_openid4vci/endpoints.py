@@ -105,7 +105,17 @@ class Openid4VCIEndpoints(Openid4VCIUtils):
         """
         logger.debug(20 * "=" + 'Request at the "Authorization" endpoint' + 20 * "=")
         _guise = self.app.server['oauth_authorization_server']
-        _guise.persistence.restore_pushed_authorization()
+        _request_uri = context.request.get("request_uri", None)
+        if not _request_uri:
+            response = JsonResponse(
+                {
+                    "error": "invalid_request",
+                    "error_description": f"Request object not a signed JWT",
+                },
+                status="403",
+            )
+            return self.send_response(response)
+        _guise.persistence.restore_pushed_authorization(_request_uri)
         _fed_entity = self.app.server["federation_entity"]
         _fed_entity.persistence.restore_state()
 
@@ -142,6 +152,7 @@ class Openid4VCIEndpoints(Openid4VCIUtils):
     def pushed_authorization_endpoint(self, context: ExtendedContext):
         _env = self._request_setup(context, "oauth_authorization_server",
                                    "pushed_authorization")
+        logger.debug(f"Entity type: {_env['entity_type']}")
         _env["entity_type"].persistence.restore_state(context.request, _env["http_info"])
 
         _env["endpoint"].request_format = "dict"
@@ -198,7 +209,7 @@ class Openid4VCIEndpoints(Openid4VCIUtils):
 
         # The only thing that should have changed on the application side
         _env["entity_type"].persistence.store_client_info(parse_req["client_id"])
-        _env["entity_type"].persistence.store_pushed_authorization()
+        _env["entity_type"].persistence.store_pushed_authorization(proc_req["response_args"]["request_uri"])
         # Also on the federation side
         _fed_entity = self.app.server["federation_entity"]
         _fed_entity.persistence.store_state()

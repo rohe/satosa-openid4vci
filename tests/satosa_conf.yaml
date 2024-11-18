@@ -79,16 +79,8 @@ op:
                 kwargs:
                   crypt_conf:
                     kwargs:
-                      keys:
-                        key_defs:
-                          - type: OCT
-                            use:
-                              - enc
-                            kid: password
-                          - type: OCT
-                            use:
-                              - enc
-                            kid: salt
+                      key: "0987654321abcdefghijklmnop...---"
+                      salt: "abcdefghijklmnop"
                       iterations: 1
               token:
                 class: idpyoidc.server.token.jwt_token.JWTToken
@@ -192,17 +184,9 @@ op:
                         use:
                           - enc
             userinfo:
-              class: satosa_idpyop.user_info.ProxyUserInfo
+              class: idpyoidc.server.user_info.UserInfo
               kwargs:
-                credential_type_to_claims:
-                  PersonIdentificationData:
-                    - email
-                    - address.streetaddress
-                    - sub
-                    - name
-                    - family_name
-                    - given_name
-                    - nickname
+                db_file: users.json
       openid_credential_issuer:
         class: satosa_openid4vci.openid_credential_issuer.OpenidCredentialIssuer
         kwargs:
@@ -234,18 +218,6 @@ op:
                     fdir: op_storage
                     key_conv: idpyoidc.util.Base64
                     value_conv: idpyoidc.util.JSON
-            userinfo:
-              class: satosa_idpyop.user_info.ProxyUserInfo
-              kwargs:
-                credential_type_to_claims:
-                  PersonIdentificationData:
-                    - email
-                    - address.streetaddress
-                    - sub
-                    - name
-                    - family_name
-                    - given_name
-                    - nickname
             httpc_params:
               verify: false
               timeout: 1
@@ -260,8 +232,7 @@ op:
               credential_configurations_supported:
                 Geant_CID_example:
                   format: "vc+sd-jwt"
-                  scope: Geant_CID_example
-                  vct: https://edugain.com
+                  vct: Geant_CID_example
                   cryptographic_binding_methods_supported:
                     - jwk
                   credential_signing_alg_values_supported":
@@ -276,31 +247,12 @@ op:
                       - https://www.w3.org/2018/credentials/v1
                       - https://example.com/edugain
                     type:
-                      - VerifiableCredential
-                      - PersonalInfo
+                      - Geant_CID_example
                     credentialSubject:
                       given_name: { }
                       family_name: { }
                       email: { }
                       phoine_numer: { }
-                UniversityDegree_LDP_VC:
-                  format: ldp_vc
-                  cryptographic_binding_methods_supported:
-                    - jwk
-                  credential_signing_alg_values_supported":
-                    - ES256
-                  credential_definition:
-                    "@context":
-                      - https://www.w3.org/2018/credentials/v1
-                      - https://example.com/edugain
-                    type:
-                      - VerifiableCredential
-                      - PersonalInfo
-                    credentialSubject:
-                      given_name: { }
-                      family_name: { }
-                      degree: { }
-                      gpa: { }
             keys:
               key_defs:
                 - type: RSA
@@ -320,5 +272,12 @@ op:
                 kwargs:
                   client_authn_method:
                     - dpop_client_auth
+                  credential_constructor:
+                    Geant_CID_example:
+                      class: openid4v.openid_credential_issuer.credential_constructor.CredentialConstructor
+                      kwargs:
+                        body:
+                          credential_type: sdjwt
+                          document_type: Geant_CID_example
             template_dir: template
-
+            session_management: false
