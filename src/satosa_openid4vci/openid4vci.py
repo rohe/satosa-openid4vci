@@ -152,6 +152,9 @@ class OpenID4VCIFrontend(FrontendModule, Openid4VCIEndpoints):
             _req_uri = orig_req.get("request_uri", "")
             if _req_uri:
                 parse_req = _ec.par_db.get(_req_uri, None)
+                # One time use so remove authz request from db
+                if parse_req:
+                    del _ec.par_db[_req_uri]
         #
         if not parse_req:
             parse_req = orig_req
