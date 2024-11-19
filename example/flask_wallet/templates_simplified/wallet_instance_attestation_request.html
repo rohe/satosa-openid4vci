@@ -33,8 +33,20 @@
 </dl>
 
 <hr>
-<input type="button" onclick="location.href='picking_ehic_issuer'"
-       value="3. Find EHIC Issuer"/>
+<form action="/qr_code">
+    <label for="collect_id">Collect ID:</label><br>
+    <input type="text" id="collect_id" name="collect_id"><br><br>
+    <label for="authentic_source">Authentic Source:</label><br>
+    <input type="text" id="authentic_source" name="authentic_source"><br><br>
+    <select id="document_type" name="document_type">
+        <option value="EHIC">EHIC</option>
+        <option value="PDA1">PDA1</option>
+    </select>
+    <input type="submit" value="Submit">
+</form>
+
+<!--<input type="button" onclick="location.href='picking_ehic_issuer'"-->
+<!--       value="3. Find EHIC Issuer"/>-->
 
 </body>
 </html>

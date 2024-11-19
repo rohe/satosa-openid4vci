@@ -1,5 +1,6 @@
 import logging
 
+import werkzeug
 from cryptojwt import JWT
 from cryptojwt.utils import b64e
 from fedservice.entity import get_verified_trust_chains
@@ -14,9 +15,9 @@ from idpyoidc import verified_claim_name
 from idpyoidc.client.defaults import CC_METHOD
 from idpyoidc.key_import import import_jwks
 from idpyoidc.key_import import store_under_other_id
+from idpyoidc.message import Message
 from idpyoidc.util import rndstr
 from openid4v.message import WalletInstanceAttestationJWT
-import werkzeug
 
 logger = logging.getLogger(__name__)
 
@@ -168,6 +169,39 @@ def find_issuers_of_trustmark(credential_issuers, credential_type):
     return cred_issuer_to_use
 
 
+@entity.route('/qr_code')
+def qr_code():
+    msg = Message().from_urlencoded(request.url.split("?")[1])
+    credential_type = f"{msg['document_type']}Credential"
+    # Remove so not part of issuer state
+    del msg["document_type"]
+
+    session["issuer_state"] = msg.to_urlencoded()
+    # credential_type = "EHICCredential"
+
+    # All credential issuers
+    credential_issuers = find_credential_issuers()
+    logger.debug(f"Credential Issuers: {credential_issuers}")
+
+    # Credential issuers that issue a specific credential type
+    _oci = find_credential_type_issuers(credential_issuers, credential_type)
+    credential_type_issuers = set(list(_oci.keys()))
+    logger.debug(f"{credential_type} Issuers: {credential_type_issuers}")
+
+    # Credential issuer that has a specific trust mark
+    cred_issuer_to_use = find_issuers_of_trustmark(_oci, credential_type)
+    logger.debug(f"Credential Issuer to use: {cred_issuer_to_use}")
+
+    session["cred_issuer_to_use"] = cred_issuer_to_use[0]
+    session["credential_type"] = credential_type
+
+    return render_template('picking_credential_issuer.html',
+                           credential_type=credential_type,
+                           credential_issuers=credential_issuers,
+                           credential_type_issuers=credential_type_issuers,
+                           credential_issuer_to_use=cred_issuer_to_use)
+
+
 @entity.route('/picking_ehic_issuer')
 def picking_ehic_issuer():
     credential_type = "EHICCredential"
@@ -221,10 +255,8 @@ def picking_pda1_issuer():
 
 
 CRED_CHOICE = {
-    "EHICCredential": "authentic_source=authentic_source_se&document_type=EHIC&collect_id"
-                      "=collect_id_10",
-    "PDA1Credential": "authentic_source=authentic_source_dk&document_type=PDA1&collect_id"
-                      "=collect_id_20"
+    "EHICCredential": "authentic_source=authentic_source_se&document_type=EHIC&collect_id=collect_id_10",
+    "PDA1Credential": "authentic_source=authentic_source_dk&document_type=PDA1&collect_id=collect_id_20"
 }
 
 
@@ -256,7 +288,7 @@ def authz():
         "response_type": "code",
         "client_id": _key_tag,
         "redirect_uri": _redirect_uri,
-        "issuer_state": CRED_CHOICE[session["credential_type"]]
+        "issuer_state": session["issuer_state"]
     }
     session["authz_req_args"] = request_args
 
@@ -287,6 +319,73 @@ def authz():
     redir.status_code = 302
     return redir
 
+
+# @entity.route('/qr_code')
+# def qr_code():
+#     pid_issuer = session["cred_issuer_to_use"]
+#     parent = current_app.server["pid_eaa_consumer"]
+#     _actor = parent.get_consumer(pid_issuer)
+#     if _actor is None:
+#         actor = parent.new_consumer(pid_issuer)
+#     else:
+#         actor = _actor
+#
+#     wallet_entity = current_app.server["wallet"]
+#
+#     b64hash = hash_func(pid_issuer)
+#     _redirect_uri = f"{parent.entity_id}/authz_cb/{b64hash}"
+#     session["redirect_uri"] = _redirect_uri
+#
+#     _key_tag = session["ephemeral_key_tag"]
+#     _wia_flow = wallet_entity.context.wia_flow[_key_tag]
+#
+#     msg = Message(authentic_source=request.form["authentic_source"],
+#                   collect_id=request.form["collect_id"],
+#                   # document_type=request.form["document_type"],
+#                   )
+#
+#     _credential_type = f"{request.form['document_type']}Credential"
+#
+#     request_args = {
+#         "authorization_details": [{
+#             "type": "openid_credential",
+#             "format": "vc+sd-jwt",
+#             "vct": _credential_type
+#         }],
+#         "response_type": "code",
+#         "client_id": _key_tag,
+#         "redirect_uri": _redirect_uri,
+#         "issuer_state": msg.to_urlencoded()
+#     }
+#     session["authz_req_args"] = request_args
+#
+#     kwargs = {
+#         "state": rndstr(24),
+#         "behaviour_args": {
+#             "wallet_instance_attestation": _wia_flow["wallet_instance_attestation"]["assertion"],
+#             "client_assertion": _wia_flow["wallet_instance_attestation"]["assertion"]
+#         }
+#     }
+#
+#     if "pushed_authorization" in actor.context.add_on:
+#         _metadata = current_app.federation_entity.get_verified_metadata(actor.context.issuer)
+#         if "pushed_authorization_request_endpoint" in _metadata["oauth_authorization_server"]:
+#             kwargs["behaviour_args"]["pushed_authorization_request_endpoint"] = _metadata[
+#                 "oauth_authorization_server"]["pushed_authorization_request_endpoint"]
+#
+#     _wia_flow["state"] = kwargs["state"]
+#
+#     _service = actor.get_service("authorization")
+#     _service.certificate_issuer_id = pid_issuer
+#
+#     req_info = _service.get_request_parameters(request_args, **kwargs)
+#
+#     session["auth_req_uri"] = req_info['url']
+#     logger.info(f"Redirect to: {req_info['url']}")
+#     redir = redirect(req_info["url"])
+#     redir.status_code = 302
+#     return redir
+#
 
 def get_consumer(issuer):
     actor = current_app.server["pid_eaa_consumer"]
@@ -390,8 +489,15 @@ def credential():
                                                state=_wia_flow["state"])
 
     # Issuer Fix
-    consumer.keyjar = store_under_other_id(consumer.keyjar, "https://127.0.0.1:8080",
-                                           "https://vc-interop-1.sunet.se")
+    if "https://127.0.0.1:8080" in consumer.keyjar:
+        consumer.keyjar = store_under_other_id(consumer.keyjar, fro="https://127.0.0.1:8080",
+                                               to="https://vc-interop-1.sunet.se")
+    if "https://satosa-test-1.sunet.se" in consumer.keyjar:
+        consumer.keyjar = store_under_other_id(consumer.keyjar, fro="https://satosa-test-1.sunet.se",
+                                               to="https://vc-interop-1.sunet.se")
+
+    logger.debug(
+        f"vc-interop-1.sunet.se keys: {consumer.keyjar.export_jwks_as_json(issuer_id='https://vc-interop-1.sunet.se')}")
 
     resp = consumer.do_request(
         "credential",
